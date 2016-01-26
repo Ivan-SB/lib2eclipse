@@ -89,6 +89,10 @@ class cube2eclipse():
       self.MCU = options.attrib["value"]
       self.MCUp = re.match(self.MCUr, self.MCU).groups()
 
+    def LibraryIncludeGet(self):
+      return ('"${project_loc:/STCube/inc"', )
+      pass
+
     def __init__(self, cubeproject, cubelibrary, includecache, refresh):
       self.cubeproject = cubeproject
       self.cubelibrary = cubelibrary
@@ -101,6 +105,7 @@ class cube2eclipse():
         else:
           self.includes = self.IncludeScan()
           self.IncludeSave()
+        self.includes.extend(self.LibraryIncludeGet())
       self.CubeProjectLoad()
 
     def ProjectLoad(self, project):
