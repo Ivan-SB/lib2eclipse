@@ -1,3 +1,10 @@
+# this project test file
+pino.csv
+.cproject
+
+# Eclipse
+.settings/
+
 # kdevelop
 .kdev4/
 *.kdev4
