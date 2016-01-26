@@ -25,14 +25,13 @@ BINLIB = ('.a', '.la', '.lo', '.so')
 STMDIR = 'SW4STM32'
 INCLUDECACHE = 'includecache.csv'
 
-MCURE = 'STM32(.)(.)0(.).(.)'
+MCURE = 'STM32(.)(.)0(.)(.)(.)'
 
 LIBRARYNAME = "STCube"
 LIBRARYVERSION = "1.3.0"
 LIBRARYHASH = "000"
 
-LINKERSCRIPT = 'STM32{}{}0{}X{}_FLASH.ld'
-LINKERPATH = "Drivers/CMSIS/Device/ST/STM32{}{}xx/Source/Templates/gcc/linker"
+LDSCRIPT = '{}_FLASH.ld'
 BINLIBPATH = ("Drivers/CMSIS/Lib/GCC",)
 
 SYSTEMC = "system_stm32{}{}xx.c"
@@ -47,7 +46,7 @@ class cube2eclipse():
     EXCLUDEr = re.compile("|".join(EXCLUDE))
     MCUr = re.compile(MCURE)
 
-# TODO: componenttype should be an Enum
+# TODO componenttype should be an Enum
 
     def CleanList(self, xmllist):
       for e in xmllist:
@@ -73,6 +72,9 @@ class cube2eclipse():
         self.cubecproject = etree.parse(open(cproject, "r"))
       else:
         sys.exit("{} can't be opened for reading".format(cproject))
+      self.CubeLibraryCheck()
+      self.CubeGetInfo()
+      self.ldscript = os.path.join(eclipseproject, LDSCRIPT.format(self.MCU))
         
     def CubeLibraryCheck(self):
       if (os.path.isdir(self.cubelibrary) and
@@ -86,8 +88,6 @@ class cube2eclipse():
       options = self.cubecproject.xpath('//option[@name="Mcu" and @superClass="fr.ac6.managedbuild.option.gnu.cross.mcu"]')[0]
       self.MCU = options.attrib["value"]
       self.MCUp = re.match(self.MCUr, self.MCU).groups()
-      self.ldscript = LINKERSCRIPT.format(self.MCUp[0], self.MCUp[1], self.MCUp[2], self.MCUp[3])
-      self.ldpath = os.path.join(self.cubelibrary, LINKERPATH.format(self.MCUp[0], self.MCUp[1]), self.ldscript)
 
     def __init__(self, cubeproject, cubelibrary, includecache, refresh):
       self.cubeproject = cubeproject
@@ -102,15 +102,12 @@ class cube2eclipse():
           self.includes = self.IncludeScan()
           self.IncludeSave()
       self.CubeProjectLoad()
-      self.CubeLibraryCheck()
-      self.CubeGetInfo()
 
     def ProjectLoad(self, project):
       cproject = os.path.join(project, '.cproject')
       if os.path.isfile(cproject) and os.access(cproject, os.W_OK):
         self.projectpath = project
         self.project = etree.parse(open(cproject, 'r+'))
-        self.projectlinkerscript = os.path.join(self.projectpath, 'ldscripts')
       else:
         sys.exit("{} can't be opened for writing".format(cproject))
 
@@ -184,24 +181,25 @@ class cube2eclipse():
 
     def ProjectCleanBinLibraries(self, componenttype='current'):
       if componenttype == 'all':
-        linkerpath = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]/listOptionValue')
-        self.CleanList(linkerpath)
-        linkerpath = self.project.xpath('//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]/listOptionValue')
-        self.CleanList(linkerpath)
+        options = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]/listOptionValue')
+        self.CleanList(options)
+        options = self.project.xpath('//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]/listOptionValue')
+        self.CleanList(options)
       elif componenttype == 'current':
-        linkerpath = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]/listOptionValue[@library="{}"]'.format(LIBRARYNAME))
-        self.CleanList(linkerpath)
-        linkerpath = self.project.xpath('//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]/listOptionValue[@library="{}"]'.format(LIBRARYNAME))
-        self.CleanList(linkerpath)
+        options = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]/listOptionValue[@library="{}"]'.format(LIBRARYNAME))
+        self.CleanList(options)
+        options = self.project.xpath('//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]/listOptionValue[@library="{}"]'.format(LIBRARYNAME))
+        self.CleanList(options)
 
-    # FIXME: if there is no previous option, id doesn't add libraries. I don't know how to get an "Eclipse id" from python
+    # TODO "Define ARM_MATH_CM7, ARM_MATH_CM4, ARM_MATH_CM3, ARM_MATH_CM0PLUS or ARM_MATH_CM0" according to MCU type when including math
+    # FIXME if there is no previous option, id doesn't add libraries. I don't know how to get an "Eclipse id" from python
     def ProjectAddBinLibraries(self):
-      linkerpath = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]')
-      for lib in linkerpath:
+      sections = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]')
+      for lib in sections:
         for binlibpath in self.BinLibrariesScan():
           etree.SubElement(lib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.cubelibrary, binlibpath), 'library': LIBRARYNAME})
-      linkerpath = self.project.xpath('//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]')
-      for lib in linkerpath:
+      sections = self.project.xpath('//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]')
+      for lib in sections:
         for binlibpath in self.BinLibrariesScan():
           for f in glob.glob(os.path.join(self.cubelibrary, binlibpath) + '/*.a'):
             libname = os.path.splitext(os.path.basename(f))[0]
@@ -212,27 +210,27 @@ class cube2eclipse():
         for f in glob.glob(os.path.join(self.projectpath, 'ldscripts') + '/*.ld'):
           os.remove(f)
       elif componenttype=='current':
-        os.remove(self.ldpath)
+        os.remove(os.path.join(self.projectpath, 'ldscripts', LDSCRIPT.format(self.MCU)))
 
     def ProjectCleanLD(self, componenttype='current'):
       if componenttype == 'all':
-        linkerscript = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]/listOptionValue')
+        options = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]/listOptionValue')
       elif componenttype == 'current':
-        linkerscript = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]/listOptionValue[@library="{}"'.format(LIBRARYNAME))
-      self.CleanList(linkerscript)
+        options = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]/listOptionValue[@library="{}"'.format(LIBRARYNAME))
+      self.CleanList(options)
       self.ProjectRemoveLD(componenttype)
 
     def ProjectAddLD(self):
-      linkerscript = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]')
-      for ls in linkerscript:
+      sections = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]')
+      for ls in sections:
         etree.SubElement(ls, 'listOptionValue', {'builtIn': "false", 'value': self.ldscript, 'library': LIBRARYNAME})
-      linkerpath = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]')
-      for lib in linkerpath:
+      sections = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]')
+      for lib in sections:
         etree.SubElement(lib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts'), 'library': LIBRARYNAME})
-      shutil.copy2(self.ldpath, os.path.join(self.projectpath, 'ldscripts'))
+      shutil.copy2(self.ldscript, os.path.join(self.projectpath, 'ldscripts'))
 
     def ProjectImportStartup(self):
-      startupfile = os.path.join(self.cubelibrary, STARTUPPATH.format(self.MCUp[0], self.MCUp[1]), STARTUP.format(self.MCUp[0].lower(), self.MCUp[1].lower(), self.MCUp[2].lower(), self.MCUp[3].lower()))
+      startupfile = os.path.join(self.cubelibrary, STARTUPPATH.format(self.MCUp[0], self.MCUp[1]), STARTUP.format(self.MCUp[0].lower(), self.MCUp[1].lower(), self.MCUp[2].lower(), self.MCUp[4].lower()))
       shutil.copy2(startupfile, os.path.join(self.projectpath, 'ldscripts'))
 
     def ProjectCleanDef(self, componenttype='current'):
@@ -253,7 +251,7 @@ class cube2eclipse():
           etree.SubElement(d, 'listOptionValue', {'builtin': 'false', "value": sd, 'library': LIBRARYNAME})
     
     def rmtreeError(self, func, path, execinfo):
-      print('{} deleting path {}'.format(execinfo['type'], path), file=sys.stderr)
+      print('{} deleting path {}'.format(execinfo[0].__name__, path), file=sys.stderr)
       
     def ProjectCleanARMSrc(self):
       shutil.rmtree(os.path.join(self.projectpath, 'src'), ignore_errors=False, onerror=self.rmtreeError)
@@ -262,8 +260,11 @@ class cube2eclipse():
     
     def ProjectCleanSrc(self):
       systemfile = os.path.join(self.projectpath, 'ldscripts', SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
-      os.remove(systemfile)
-      shutil.rmtree(os.path.join(self.projectpath, LIBRARYNAME))
+      try:
+        os.remove(systemfile)
+        shutil.rmtree(os.path.join(self.projectpath, LIBRARYNAME))
+      except FileNotFoundError:
+        pass
     
     def ProjectAddSrc(self):
       systemfile = os.path.join(self.cubelibrary, SYSTEMPATH.format(self.MCUp[0], self.MCUp[1]), SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
