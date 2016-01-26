@@ -19,8 +19,26 @@ But the most tedious part of importing a library is setting up include paths and
 The most tedious part of updating or removing a library is removing/updating the source in the workspace.
 **These functionalities are already implemented in current code but should be extracted in a library and made easier to use.**
 
-
 ## Known bugs
+### Exclude from Build...
+Since I'm linking most of CubeMX library including examples, BSP etc... inside the workspace, way too much stuff get compiled.
+Some of this stuff may cause compilation errors because of missing configuration files (mostly stuff in Middleware), some may cause errors because of redefinition of functions or because they are templates.
+
+* Drivers/CMSIS/Device/ST/STM32..xx/Source/Templates
+Should be excluded.
+* Stuff in Middleware should be excluded if you don't need it.
+* Stuff in
+Drivers/CMSIS/DSP_Lib
+Drivers/BSP
+because it may take way to long to compile and you'd use the compiled version of the math library or because you may miss configuration files
+* Utilities
+
+I find that excluding stuff from build is more convenient than:
+* having multiple copies of the library without some directory
+* copying the parts later
+I may add the feature to automatically exclude code that will SURELY cause problems and possibly guess from the CubeMX project which parts of Middleware should be enabled/disabled.
+
+### Binary libraries
 Unfortunately at this moment I don't know how to generate numeric id for Eclipse .cproject
 So if the original project doesn't have some "<option>" already specified, this tool won't be
 able to add the listOptionValue.
@@ -28,4 +46,3 @@ This more concretely means in the case of GNU ARM plugin projects, it won't be a
 A workaround is to add a fake entry to
 Proprieties > C/C++ Build -> Settings > Cross ARM C Linker > Libraries
 a fake entry
-
