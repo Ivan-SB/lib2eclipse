@@ -56,13 +56,16 @@ class cube2eclipse():
       for e in xmllist:
         e.getparent().remove(e)
 
-    def ProjectPrint(self, file):
-      s = etree.tostring(self.project, pretty_print=True, xml_declaration=True, encoding='UTF-8', standalone="yes")
+    def TreePrint(self, tree, file):
+      s = etree.tostring(tree, pretty_print=True, xml_declaration=True, encoding='UTF-8', standalone="yes")
       if file:
         with open(file, 'wb+') as f:
           f.write(s)
       else:
         print(s)
+
+    def ProjectPrint(self, file):
+      self.TreePrint(self.project, file)
 
     def ProjectSave(self):
       self.ProjectPrint(os.path.join(self.projectpath, '.cproject'))
@@ -96,11 +99,28 @@ class cube2eclipse():
     def LibraryIncludeGet(self):
       return ('"${project_loc:/STCube/inc"',)
 
+    def UndoSave(self):
+      self.TreePrint(self.undo, os.path.join(self.projectpath, '.cprojectundo'))
+
+    def UndoLoad(self):
+      projectundo = os.path.join(self.projectpath, '.cprojectundo')
+      if(os.path.isfile(projectundo)):
+        self.projectundo = projectundo
+        self.undo = etree.parse(open(projectundo, 'r+'))
+        install = self.undo.xpath('//lib2eclipse/library[@name="{}"]'.format(LIBRARYNAME))
+        if not len(install) > 0:
+          lib2eclipse = self.undo.xpath('//lib2eclipse')
+          self.install = etree.SubElement(lib2eclipse[0], 'library', name=LIBRARYNAME)
+        else:
+          self.install = install
+      else:
+        self.undo = etree.Element("lib2eclipse", {'version': __version__, 'URL': __url__})
+        self.install = etree.SubElement(self.undo, 'library', name=LIBRARYNAME)
+
     def __init__(self, cubeproject, cubelibrary, includecache, refresh):
       self.cubeproject = cubeproject
       self.cubelibrary = cubelibrary
       self.includecache = includecache
-      self.install = etree.Element("lib2eclipse", {'version': __version__, 'URL': __url__})
       if not self.includecache:
         self.includes = self.IncludeScan()
       else:
@@ -119,6 +139,7 @@ class cube2eclipse():
         self.project = etree.parse(open(cproject, 'r+'))
       else:
         sys.exit("{} can't be opened for writing".format(cproject))
+      self.UndoLoad()
 
     def ProjectGetInfo(self):
       library = self.project.xpath('//storageModule[@moduleId="org.eclipse.cdt.core.settings"]/libraryManager/library[@name="{}"]'.format(LIBRARYNAME))
@@ -327,9 +348,9 @@ class cube2eclipse():
         pass
       # undo
       symlink = etree.SubElement(self.install, 'symlink')
-      etree.SubElement(symlink, value =  os.path.join(dst, 'Drivers'))
-      etree.SubElement(symlink, value =  os.path.join(dst, 'Middlewares'))
-      etree.SubElement(symlink, value =  os.path.join(dst, 'Utilities'))
+      etree.SubElement(symlink, 'dir', value=os.path.join(dst, 'Drivers'))
+      etree.SubElement(symlink, 'dir', value=os.path.join(dst, 'Middlewares'))
+      etree.SubElement(symlink, 'dir', value=os.path.join(dst, 'Utilities'))
       try:
         shutil.rmtree(os.path.join(self.projectpath, LIBRARYNAME, 'Inc'))
         shutil.rmtree(os.path.join(self.projectpath, LIBRARYNAME, 'Src'))
@@ -339,8 +360,8 @@ class cube2eclipse():
       shutil.copytree(os.path.join(self.cubeproject, 'Src'), os.path.join(self.projectpath, LIBRARYNAME, 'Src'))
       # undo
       src = etree.SubElement(self.install, 'src')
-      etree.SubElement(src, value = os.path.join(self.projectpath, LIBRARYNAME, 'Inc'))
-      etree.SubElement(src, value = os.path.join(self.projectpath, LIBRARYNAME, 'Src'))
+      etree.SubElement(src, 'dir', value=os.path.join(self.projectpath, LIBRARYNAME, 'Inc'))
+      etree.SubElement(src, 'dir', value=os.path.join(self.projectpath, LIBRARYNAME, 'Src'))
 
     def ProjectRebase(self):
       self.ProjectCleanInclude('current')
@@ -400,5 +421,6 @@ if __name__ == "__main__":
     cube.ProjectAddSrc()
 #     cube.ProjectSave()
     cube.ProjectPrint("./.cproject")
-    print(etree.tostring(cube.install, pretty_print=True))
+    cube.UndoSave()
+#     print(etree.tostring(cube.undo, pretty_print=True))
 
