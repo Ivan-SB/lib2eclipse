@@ -10,6 +10,10 @@
 @date 2016-01-22
 '''
 
+__version__ = '0.1'
+__libversion__ = '0.1'
+__url__ = 'https://github.com/Ivan-SB/lib2eclipse'
+
 import argparse
 
 import os
@@ -75,7 +79,7 @@ class cube2eclipse():
       self.CubeLibraryCheck()
       self.CubeGetInfo()
       self.ldscript = os.path.join(eclipseproject, LDSCRIPT.format(self.MCU))
-        
+
     def CubeLibraryCheck(self):
       if (os.path.isdir(self.cubelibrary) and
           os.path.isdir(os.path.join(self.cubelibrary, 'Drivers')) and
@@ -83,20 +87,20 @@ class cube2eclipse():
         return
       else:
         sys.exit("{} doesn't look as the Cube Library directory".format(self.cubelibrary))
-    
+
     def CubeGetInfo(self):
       options = self.cubecproject.xpath('//option[@name="Mcu" and @superClass="fr.ac6.managedbuild.option.gnu.cross.mcu"]')[0]
       self.MCU = options.attrib["value"]
       self.MCUp = re.match(self.MCUr, self.MCU).groups()
 
     def LibraryIncludeGet(self):
-      return ('"${project_loc:/STCube/inc"', )
-      pass
+      return ('"${project_loc:/STCube/inc"',)
 
     def __init__(self, cubeproject, cubelibrary, includecache, refresh):
       self.cubeproject = cubeproject
       self.cubelibrary = cubelibrary
       self.includecache = includecache
+      self.install = etree.Element("lib2eclipse", {'version': __version__, 'URL': __url__})
       if not self.includecache:
         self.includes = self.IncludeScan()
       else:
@@ -176,10 +180,14 @@ class cube2eclipse():
           i.getparent().remove(i)
 
     def ProjectAddInclude(self):
+      uinclude = etree.SubElement(self.install, 'include')
       includes = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="includePath"]')
       for i in includes:
         for l in self.includes:
           etree.SubElement(i, 'listOptionValue', {'builtin': 'false', "value": '{}'.format(l)})
+      # undo
+      for l in self.includes:
+          etree.SubElement(uinclude, 'listOptionValue', {'builtin': 'false', "value": '{}'.format(l)})
 
     def BinLibrariesScan(self):
       return BINLIBPATH
@@ -196,25 +204,35 @@ class cube2eclipse():
         options = self.project.xpath('//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]/listOptionValue[@library="{}"]'.format(LIBRARYNAME))
         self.CleanList(options)
 
-    # TODO "Define ARM_MATH_CM7, ARM_MATH_CM4, ARM_MATH_CM3, ARM_MATH_CM0PLUS or ARM_MATH_CM0" according to MCU type when including math
     # FIXME if there is no previous option, id doesn't add libraries. I don't know how to get an "Eclipse id" from python
     def ProjectAddBinLibraries(self):
+      libbinpaths = self.BinLibrariesScan()
+      ulibbinpath = etree.SubElement(self.install, 'libbinpath')
       sections = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]')
       for lib in sections:
-        for binlibpath in self.BinLibrariesScan():
+        for binlibpath in libbinpaths:
           etree.SubElement(lib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.cubelibrary, binlibpath), 'library': LIBRARYNAME})
+      # undo
+      for binlibpath in libbinpaths:
+        etree.SubElement(ulibbinpath, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.cubelibrary, binlibpath)})
+      ulibbinpathlib = etree.SubElement(self.install, 'libbinpathlib')
+      libnames = []
       sections = self.project.xpath('//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]')
       for lib in sections:
-        for binlibpath in self.BinLibrariesScan():
+        for binlibpath in libbinpaths:
           for f in glob.glob(os.path.join(self.cubelibrary, binlibpath) + '/*.a'):
             libname = os.path.splitext(os.path.basename(f))[0]
+            libnames.append(libname)
             etree.SubElement(lib, 'listOptionValue', {'builtIn': "false", 'value': libname, 'library': LIBRARYNAME})
+      # undo
+      for libname in libnames:
+        etree.SubElement(ulibbinpathlib, 'listOptionValue', {'builtIn': "false", 'value': libname})
 
     def ProjectRemoveLD(self, componenttype='current'):
-      if componenttype=='all':
+      if componenttype == 'all':
         for f in glob.glob(os.path.join(self.projectpath, 'ldscripts') + '/*.ld'):
           os.remove(f)
-      elif componenttype=='current':
+      elif componenttype == 'current':
         os.remove(os.path.join(self.projectpath, 'ldscripts', LDSCRIPT.format(self.MCU)))
 
     def ProjectCleanLD(self, componenttype='current'):
@@ -226,17 +244,29 @@ class cube2eclipse():
       self.ProjectRemoveLD(componenttype)
 
     def ProjectAddLD(self):
+      uld = etree.SubElement(self.install, 'ld')
       sections = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]')
-      for ls in sections:
-        etree.SubElement(ls, 'listOptionValue', {'builtIn': "false", 'value': self.ldscript, 'library': LIBRARYNAME})
-      sections = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]')
-      for lib in sections:
-        etree.SubElement(lib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts'), 'library': LIBRARYNAME})
+      for ld in sections:
+        etree.SubElement(ld, 'listOptionValue', {'builtIn': "false", 'value': self.ldscript, 'library': LIBRARYNAME})
       shutil.copy2(self.ldscript, os.path.join(self.projectpath, 'ldscripts'))
+      # undo
+      etree.SubElement(uld, 'listOptionValue', {'builtIn': "false", 'value': self.ldscript})
+      uldlib = etree.SubElement(self.install, 'ldlib')
+      sections = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]')
+      for ldlib in sections:
+        etree.SubElement(ldlib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts'), 'library': LIBRARYNAME})
+      # undo
+      etree.SubElement(uldlib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts')})
 
     def ProjectImportStartup(self):
       startupfile = os.path.join(self.cubelibrary, STARTUPPATH.format(self.MCUp[0], self.MCUp[1]), STARTUP.format(self.MCUp[0].lower(), self.MCUp[1].lower(), self.MCUp[2].lower(), self.MCUp[4].lower()))
       shutil.copy2(startupfile, os.path.join(self.projectpath, 'ldscripts'))
+      # undo
+      etree.SubElement(self.install, 'startup',
+                       {'value': os.path.join(
+                                              self.projectpath, 'ldscripts',
+                                              STARTUP.format(self.MCUp[0].lower(), self.MCUp[1].lower(), self.MCUp[2].lower(), self.MCUp[4].lower())
+                                              )})
 
     def ProjectCleanDef(self, componenttype='current'):
       if componenttype == 'all':
@@ -245,7 +275,13 @@ class cube2eclipse():
         define = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="definedSymbols"]/listOptionValue[@library="{}"]'.format(LIBRARYNAME))
       self.CleanList(define)
 
+    def GetMathLib(self):
+      # TODO ARM_MATH_CM0PLUS vs ARM_MATH_CM0
+      return 'ARM_MATH_CM' + self.MCUp[1]
+
     def ProjectAddDef(self):
+      udefine = etree.SubElement(self.install, 'define')
+      mathlib = self.GetMathLib()
       define = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="definedSymbols"]')
       definev = []
       definesrc = self.cubecproject.xpath('//option[@superClass="gnu.c.compiler.option.preprocessor.def.symbols" and @valueType="definedSymbols"]/listOptionValue')
@@ -253,16 +289,21 @@ class cube2eclipse():
         definev.append(sd.attrib['value'])
       for d in define:
         for sd in definev:
-          etree.SubElement(d, 'listOptionValue', {'builtin': 'false', "value": sd, 'library': LIBRARYNAME})
-    
+          etree.SubElement(d, 'listOptionValue', {'builtin': 'false', "value": sd})
+        etree.SubElement(d, 'listOptionValue', {'builtin': 'false', "value": mathlib})
+      # undo
+      for sd in definev:
+        etree.SubElement(udefine, 'listOptionValue', {'builtin': 'false', "value": sd})
+      etree.SubElement(udefine, 'listOptionValue', {'builtin': 'false', "value": mathlib})
+
     def rmtreeError(self, func, path, execinfo):
       print('{} deleting path {}'.format(execinfo[0].__name__, path), file=sys.stderr)
-      
-    def ProjectCleanARMSrc(self):
+
+    def ProjectCleanSrcARM(self):
       shutil.rmtree(os.path.join(self.projectpath, 'src'), ignore_errors=False, onerror=self.rmtreeError)
       shutil.rmtree(os.path.join(self.projectpath, 'include'), ignore_errors=False, onerror=self.rmtreeError)
       shutil.rmtree(os.path.join(self.projectpath, 'system'), ignore_errors=False, onerror=self.rmtreeError)
-    
+
     def ProjectCleanSrc(self):
       systemfile = os.path.join(self.projectpath, 'ldscripts', SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
       try:
@@ -270,7 +311,7 @@ class cube2eclipse():
         shutil.rmtree(os.path.join(self.projectpath, LIBRARYNAME))
       except FileNotFoundError:
         pass
-    
+
     def ProjectAddSrc(self):
       systemfile = os.path.join(self.cubelibrary, SYSTEMPATH.format(self.MCUp[0], self.MCUp[1]), SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
       shutil.copy2(systemfile, os.path.join(self.projectpath, 'ldscripts'))
@@ -329,7 +370,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     cube = cube2eclipse(args.cubeproject, args.cubelibrary, args.includecache, args.refresh)
-    
+
     cube.ProjectLoad(args.project)
     cube.ProjectGetInfo()
     cube.ProjectSetInfo()
@@ -342,8 +383,11 @@ if __name__ == "__main__":
     cube.ProjectImportStartup()
     cube.ProjectCleanBinLibraries('current')
     cube.ProjectAddBinLibraries()
-    cube.ProjectCleanARMSrc()
+    cube.ProjectCleanSrcARM()
     cube.ProjectCleanSrc()
+
     cube.ProjectAddSrc()
 #     cube.ProjectSave()
     cube.ProjectPrint("./.cproject")
+    print(etree.tostring(cube.install, pretty_print=True))
+
