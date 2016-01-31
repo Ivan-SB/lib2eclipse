@@ -145,29 +145,6 @@ class cube2eclipse():
         sys.exit("{} can't be opened for writing".format(cproject))
       self.UndoLoad()
 
-    def ProjectGetInfo(self):
-      library = self.project.xpath('//storageModule[@moduleId="org.eclipse.cdt.core.settings"]/libraryManager/library[@name="{}"]'.format(LIBRARYNAME))
-      if len(library):
-        return library[0]
-      else:
-        return None
-
-    def ProjectSetInfo(self):
-      library = self.ProjectGetInfo()
-      if library is not None:
-        library.attrib['path'] = self.cubelibrary
-        library.attrib['version'] = LIBRARYVERSION
-        library.attrib['hash'] = LIBRARYHASH
-      else:
-        libraryManager = self.project.xpath('//storageModule[@moduleId="org.eclipse.cdt.core.settings"]/libraryManager')
-        if not len(libraryManager):
-          EclipseCDT = self.project.xpath('//storageModule[@moduleId="org.eclipse.cdt.core.settings"]')[0]
-          libraryManager = (etree.SubElement(EclipseCDT, 'libraryManager', version="0.1"),)
-        library = etree.Element('library',
-                      {'name': LIBRARYNAME, 'path': self.cubelibrary, 'version': LIBRARYVERSION, 'hash': '0000'}
-                      )
-        libraryManager[0].append(library)
-
     def IncludeScan(self):
       includes = []
       for dirpath, _, filenames in os.walk(self.cubelibrary):
@@ -250,7 +227,7 @@ class cube2eclipse():
       sections = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]')
       for lib in sections:
         for binlibpath in libbinpaths:
-          etree.SubElement(lib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.cubelibrary, binlibpath), 'library': LIBRARYNAME})
+          etree.SubElement(lib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.cubelibrary, binlibpath)})
       # undo
       ulibbinpath = etree.SubElement(self.undolibrary, 'libbinpath')
       for binlibpath in libbinpaths:
@@ -262,7 +239,7 @@ class cube2eclipse():
           for f in glob.glob(os.path.join(self.cubelibrary, binlibpath) + '/*.a'):
             libname = os.path.splitext(os.path.basename(f))[0]
             libnames.append(libname)
-            etree.SubElement(lib, 'listOptionValue', {'builtIn': "false", 'value': libname, 'library': LIBRARYNAME})
+            etree.SubElement(lib, 'listOptionValue', {'builtIn': "false", 'value': libname})
       # undo
       ulibbinpathlib = etree.SubElement(self.undolibrary, 'libbinpathlib')
       for libname in libnames:
@@ -291,14 +268,14 @@ class cube2eclipse():
     def ProjectAddLD(self):
       sections = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]')
       for ld in sections:
-        etree.SubElement(ld, 'listOptionValue', {'builtIn': "false", 'value': self.ldscript, 'library': LIBRARYNAME})
+        etree.SubElement(ld, 'listOptionValue', {'builtIn': "false", 'value': self.ldscript})
       shutil.copy2(self.ldscript, os.path.join(self.projectpath, 'ldscripts'))
       # undo
       uld = etree.SubElement(self.undolibrary, 'ld')
       etree.SubElement(uld, 'listOptionValue', {'builtIn': "false", 'value': self.ldscript})
       sections = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]')
       for ldlib in sections:
-        etree.SubElement(ldlib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts'), 'library': LIBRARYNAME})
+        etree.SubElement(ldlib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts')})
       # undo
       uldlib = etree.SubElement(self.undolibrary, 'ldlib')
       etree.SubElement(uldlib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts')})
@@ -436,8 +413,6 @@ if __name__ == "__main__":
     cube = cube2eclipse(args.cubeproject, args.cubelibrary, args.includecache, args.refresh)
 
     cube.ProjectLoad(args.project, args.wipe)
-    cube.ProjectGetInfo()
-    cube.ProjectSetInfo()
     cube.ProjectCleanInclude('current')
     cube.ProjectCleanDef('all')
     cube.ProjectAddDef()
