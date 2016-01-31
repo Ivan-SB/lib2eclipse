@@ -63,6 +63,18 @@ class cube2eclipse():
       for e in xmllist:
         if e.attrib['value'] in values:
           e.getparent().remove(e)
+          
+    def ProjectClean(self, optionpath, uoptionpath, componenttype='current'):
+      options = self.project.xpath(optionpath)
+      if componenttype == 'all':
+        self.CleanList(options)
+      elif componenttype == 'current':
+        try:
+          uoptions = self.previousundolibrary.xpath(uoptionpath)
+          if len(uoptions)>0:
+            self.CleanListFiltered(options, uoptions[0])
+        except AttributeError:
+          pass
 
     def TreePrint(self, tree, file):
       s = etree.tostring(tree, pretty_print=True, xml_declaration=True, encoding='UTF-8', standalone="yes")
@@ -168,16 +180,9 @@ class cube2eclipse():
       return re.search(self.EXCLUDEr, dirpath)
 
     def ProjectCleanInclude(self, componenttype='current'):
-      includes = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="includePath"]/listOptionValue')
-      if componenttype == 'all':
-        self.CleanList(includes)
-      elif componenttype == 'current':
-        try:
-          uincludes = self.previousundolibrary.xpath('//include/listOptionValue')
-          if len(uincludes)>0:
-            self.CleanListFiltered(includes, uincludes[0])
-        except AttributeError:
-          pass
+      optionpath = '//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="includePath"]/listOptionValue'
+      uoptionpath = '//include/listOptionValue'
+      self.ProjectClean(optionpath, uoptionpath, componenttype)
 
     def ProjectCleanIncludeList(self, alienlibraries):
       includes = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="includePath"]/listOptionValue')
@@ -198,28 +203,19 @@ class cube2eclipse():
     def BinLibrariesScan(self):
       return BINLIBPATH
 
+    def ProjectCleanBinLibPath(self, componenttype='current'):
+      optionpath = '//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]/listOptionValue'
+      uoptionpath = '//libbinpath/listOptionValue'
+      self.ProjectClean(optionpath, uoptionpath, componenttype)
+
+    def ProjectCleanBinLib(self, componenttype='current'):
+      optionpath='//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]/listOptionValue'
+      uoptionpath='//libbinpathlib/listOptionValue'
+      self.ProjectClean(optionpath, uoptionpath, componenttype)
+
     def ProjectCleanBinLibraries(self, componenttype='current'):
-      # TODO ProjectCleanBinLibraries() split lib from path
-      if componenttype == 'all':
-        options = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]/listOptionValue')
-        self.CleanList(options)
-        options = self.project.xpath('//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]/listOptionValue')
-        self.CleanList(options)
-      elif componenttype == 'current':
-        options = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]/listOptionValue')
-        try:
-          uoptions = self.previousundolibrary.xpath('//libbinpath/listOptionValue')
-          if len(uoptions)>0:
-            self.CleanListFiltered(options, uoptions[0])
-        except AttributeError:
-          pass
-        options = self.project.xpath('//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]/listOptionValue')
-        try:
-          uoptions = self.previousundolibrary.xpath('//libbinpathlib/listOptionValue')
-          if len(uoptions)>0:
-            self.CleanListFiltered(options, uoptions[0])
-        except AttributeError:
-          pass
+      self.ProjectCleanBinLibPath(componenttype)
+      self.ProjectCleanBinLib(componenttype)
 
     # FIXME if there is no previous option, id doesn't add libraries. I don't know how to get an "Eclipse id" from python
     def ProjectAddBinLibraries(self):
@@ -253,16 +249,9 @@ class cube2eclipse():
         os.remove(os.path.join(self.projectpath, 'ldscripts', LDSCRIPT.format(self.MCU)))
 
     def ProjectCleanLD(self, componenttype='current'):
-      options = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]/listOptionValue')
-      if componenttype == 'all':
-        self.CleanList(options)
-      elif componenttype == 'current':
-        try:
-          uoptions = uoptions = self.previousundolibrary.xpath('//ld/listOptionValue')
-          if len(uoptions)>0:
-            self.CleanListFiltered(options, uoptions[0])
-        except AttributeError:
-          pass
+      optionpath = '//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]/listOptionValue'
+      uoptionpath = '//ld/listOptionValue'
+      self.ProjectClean(optionpath, uoptionpath, componenttype)
       self.ProjectRemoveLD(componenttype)
 
     def ProjectAddLD(self):
@@ -291,15 +280,9 @@ class cube2eclipse():
                                               )})
 
     def ProjectCleanDef(self, componenttype='current'):
-      options = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="definedSymbols"]/listOptionValue')
-      if componenttype == 'all':
-        self.CleanList(options)  
-      elif componenttype == 'current':
-        try:
-          uoptions = self.previousundolibrary.xpath('//define/listOptionValue')
-          self.CleanListFiltered(options, uoptions[0])
-        except AttributeError:
-          pass
+      optionpath='//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="definedSymbols"]/listOptionValue'
+      uoptionpath='//define/listOptionValue'
+      self.ProjectClean(optionpath, uoptionpath, componenttype)
 
     def GetMathLib(self):
       # TODO ARM_MATH_CM0PLUS vs ARM_MATH_CM0
