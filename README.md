@@ -11,10 +11,10 @@ This means that if you need to use a library in an GNU ARM Eclipse C/C++ project
 * you'll be helped to replace your library with a new version
 
 ## HOWTO
-1 Download the CubeMX library from ST website and unzip it somewhere
-2 Create a CubeMX project somewhere
-3 Create a GNU ARM Eclipse project for your ST family
-4 Use this tool
+1. Download the CubeMX library from ST website and unzip it somewhere
+2. Create a CubeMX project somewhere
+3. Create a GNU ARM Eclipse project for your ST family
+4. Use this tool
 
 ### Examples
 #### first install over a fresh GNU ARM STM32 project
