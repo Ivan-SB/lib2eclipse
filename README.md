@@ -1,14 +1,31 @@
 # lib2eclipse
 
 ## Overview
-This program was originally conceived to import CubeMX projects into GNU ARM Eclipse plugin.
+This program was originally conceived to import CubeMX projects into GNU ARM Eclipse plugin http://gnuarmeclipse.github.io/
 At this stage it can only do that.
 
 However it has some methods that could be used in a more general way to import and relocate external libraries into C projects without them being located in the workspace.
 This means that if you need to use a library in an GNU ARM Eclipse C/C++ project:
 * you won't have to add all include paths by hand
 * you will be helped to update all include paths if you relocate the library
-* you'll helped to replace your library with a new version
+* you'll be helped to replace your library with a new version
+
+## HOWTO
+1 Download the CubeMX library from ST website and unzip it somewhere
+2 Create a CubeMX project somewhere
+3 Create a GNU ARM Eclipse project for your ST family
+4 Use this tool
+
+### Examples
+#### first install over a fresh GNU ARM STM32 project
+./cube2eclipse.py -c [path to your CubeMX project] -l [path to the CubeMX library] -p [path to your GNU ARM Eclipse project] -a install -w
+-w is needed to cleanup not useful directories and settings of GNU ARM project.
+#### removal code and configuration related to CubeMX
+./cube2eclipse.py -c [path to your CubeMX project] -l [path to the CubeMX library] -p [path to your GNU ARM Eclipse project] -a remove
+#### installation of a new version of CubeMX library or a CubeMX project generated with a new CubeMX tool
+unzip somewhere else the CubeMX library
+./cube2eclipse.py -c [path to your CubeMX project] -l [path to the CubeMX NEW library] -p [path to your GNU ARM Eclipse project] -a install
+this will replace all includes, source etc... with new ones leaving untouched everything you wrote outside of the STCube dir
 
 ## TODO
 Importing CubeMX projects into Eclipse requires some specialized additional steps than just adding include path and some symlink into Eclipse workspace:
@@ -16,8 +33,7 @@ Importing CubeMX projects into Eclipse requires some specialized additional step
 * picking up the right linker script and startup code
 * do some cleanup
 But the most tedious part of importing a library is setting up include paths and importing the source code into the workspace.
-The most tedious part of updating or removing a library is removing/updating the source in the workspace.
-**These functionalities are already implemented in current code but should be extracted in a library and made easier to use.**
+**These functionalities are already implemented in current code but should be extracted in a library and made easier to use with other libraries as well**
 
 ## Known bugs
 ### Exclude from Build...
