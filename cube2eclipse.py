@@ -63,18 +63,16 @@ class cube2eclipse():
       for e in xmllist:
         if e.attrib['value'] in values:
           e.getparent().remove(e)
-          
+
     def ProjectClean(self, optionpath, uoptionpath, componenttype='current'):
       options = self.project.xpath(optionpath)
       if componenttype == 'all':
         self.CleanList(options)
       elif componenttype == 'current':
-        try:
+        if hasattr(self, 'previousundolibrary'):
           uoptions = self.previousundolibrary.xpath(uoptionpath)
-          if len(uoptions)>0:
+          if len(uoptions) > 0:
             self.CleanListFiltered(options, uoptions[0])
-        except AttributeError:
-          pass
 
     def TreePrint(self, tree, file):
       s = etree.tostring(tree, pretty_print=True, xml_declaration=True, encoding='UTF-8', standalone="yes")
@@ -153,6 +151,7 @@ class cube2eclipse():
         self.project = etree.parse(open(cproject, 'r+'))
         self.undo = etree.Element("lib2eclipse", {'version': __version__, 'URL': __url__})
         self.undolibrary = etree.SubElement(self.undo, 'library', name=LIBRARYNAME)
+        self.wipe = wipe
       else:
         sys.exit("{} can't be opened for writing".format(cproject))
       self.UndoLoad()
@@ -209,8 +208,8 @@ class cube2eclipse():
       self.ProjectClean(optionpath, uoptionpath, componenttype)
 
     def ProjectCleanBinLib(self, componenttype='current'):
-      optionpath='//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]/listOptionValue'
-      uoptionpath='//libbinpathlib/listOptionValue'
+      optionpath = '//option[@superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.linker.libs" and @valueType="libs"]/listOptionValue'
+      uoptionpath = '//libbinpathlib/listOptionValue'
       self.ProjectClean(optionpath, uoptionpath, componenttype)
 
     def ProjectCleanBinLibraries(self, componenttype='current'):
@@ -244,9 +243,15 @@ class cube2eclipse():
     def ProjectRemoveLD(self, componenttype='current'):
       if componenttype == 'all':
         for f in glob.glob(os.path.join(self.projectpath, 'ldscripts') + '/*.ld'):
-          os.remove(f)
+          try:
+            os.remove(f)
+          except FileNotFoundError:
+            pass
       elif componenttype == 'current':
-        os.remove(os.path.join(self.projectpath, 'ldscripts', LDSCRIPT.format(self.MCU)))
+        try:
+          os.remove(os.path.join(self.projectpath, 'ldscripts', LDSCRIPT.format(self.MCU)))
+        except FileNotFoundError:
+          pass
 
     def ProjectCleanLD(self, componenttype='current'):
       optionpath = '//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]/listOptionValue'
@@ -280,8 +285,8 @@ class cube2eclipse():
                                               )})
 
     def ProjectCleanDef(self, componenttype='current'):
-      optionpath='//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="definedSymbols"]/listOptionValue'
-      uoptionpath='//define/listOptionValue'
+      optionpath = '//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="definedSymbols"]/listOptionValue'
+      uoptionpath = '//define/listOptionValue'
       self.ProjectClean(optionpath, uoptionpath, componenttype)
 
     def GetMathLib(self):
@@ -321,6 +326,8 @@ class cube2eclipse():
       except FileNotFoundError:
         pass
 
+    # TODO ProjectAddSrc should accept a list of dirs
+    # TODO ProjectAddSrc should be separated in Source + systemfile copy or "special file" copy
     def ProjectAddSrc(self):
       systemfile = os.path.join(self.cubelibrary, SYSTEMPATH.format(self.MCUp[0], self.MCUp[1]), SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
       shutil.copy2(systemfile, os.path.join(self.projectpath, 'ldscripts'))
@@ -328,7 +335,7 @@ class cube2eclipse():
       etree.SubElement(self.undolibrary, 'system', {'value': os.path.join(self.projectpath, 'ldscripts', SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))})
       dst = os.path.join(self.projectpath, LIBRARYNAME)
       try:
-        os.mkdir(dst, mode=0o777)
+        os.mkdir(dst, mode=0o770)
         os.symlink(os.path.join(self.cubelibrary, 'Drivers'), os.path.join(dst, 'Drivers'), target_is_directory=True)
         os.symlink(os.path.join(self.cubelibrary, 'Middlewares'), os.path.join(dst, 'Middlewares'), target_is_directory=True)
         os.symlink(os.path.join(self.cubelibrary, 'Utilities'), os.path.join(dst, 'Utilities'), target_is_directory=True)
@@ -351,12 +358,46 @@ class cube2eclipse():
       etree.SubElement(src, 'listOptionValue', value=os.path.join(self.projectpath, LIBRARYNAME, 'Inc'))
       etree.SubElement(src, 'listOptionValue', value=os.path.join(self.projectpath, LIBRARYNAME, 'Src'))
 
-    def ProjectRebase(self):
-      self.ProjectCleanInclude('current')
+    def ProjectBackup(self):
+      shutil.copy2(os.path.join(self.projectpath, '.cproject'), os.path.join(self.projectpath, '.cproject.bak'))
+
+    def ProjectRemove(self):
+      if self.wipe == True:
+        wipe = 'all'
+      else:
+        wipe = 'current'
+
+      self.ProjectBackup()
+      self.ProjectCleanInclude(wipe)
+      self.ProjectCleanDef(wipe)
+      self.ProjectCleanLD(wipe)
+      self.ProjectCleanBinLibraries(wipe)
+      self.ProjectCleanSrcARM()
+      self.ProjectCleanSrc()
+      self.ProjectPrint("./.cproject")
+#       XXX should I remove undo section?
+
+    def ProjectInstall(self):
+      if self.wipe == True:
+        wipe = 'all'
+      else:
+        wipe = 'current'
+
+      self.ProjectBackup()
+      self.ProjectCleanInclude(wipe)
+      self.ProjectCleanDef(wipe)
+      self.ProjectAddDef()
       self.ProjectAddInclude()
-      self.ProjectCleanSrc('current')
+      self.ProjectCleanLD(wipe)
+      self.ProjectAddLD()
+      self.ProjectImportStartup()
+      self.ProjectCleanBinLibraries(wipe)
+      self.ProjectAddBinLibraries()
+      self.ProjectCleanSrcARM()
+      self.ProjectCleanSrc()
       self.ProjectAddSrc()
-      pass
+      self.ProjectPrint("./.cproject")
+      self.UndoSave()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -390,25 +431,42 @@ if __name__ == "__main__":
                         dest='wipe',
                         action='store_true',
                         help='wipe cproject')
+    parser.add_argument('-a', '--action',
+                        dest='action',
+                        default='install',
+                        metavar='ACTION',
+                        help='install | remove')
 
     args = parser.parse_args()
 
     cube = cube2eclipse(args.cubeproject, args.cubelibrary, args.includecache, args.refresh)
 
     cube.ProjectLoad(args.project, args.wipe)
-    cube.ProjectCleanInclude('current')
-    cube.ProjectCleanDef('all')
-    cube.ProjectAddDef()
-    cube.ProjectAddInclude()
-    cube.ProjectCleanLD('all')
-    cube.ProjectAddLD()
-    cube.ProjectImportStartup()
-    cube.ProjectCleanBinLibraries('current')
-    cube.ProjectAddBinLibraries()
-    cube.ProjectCleanSrcARM()
-    cube.ProjectCleanSrc()
+    if args.action == 'install':
+      cube.ProjectInstall()
+    elif args.action == 'remove':
+      cube.ProjectRemove()
+    else:
+      sys.exit('Invalid action')
 
-    cube.ProjectAddSrc()
-#     cube.ProjectSave()
-    cube.ProjectPrint("./.cproject")
-    cube.UndoSave()
+#     cube.ProjectCleanInclude('current')
+#     cube.ProjectCleanDef('all')
+#
+#     cube.ProjectAddDef()
+#     cube.ProjectAddInclude()
+#
+#     cube.ProjectCleanLD('all')
+#     cube.ProjectAddLD()
+#
+#     cube.ProjectImportStartup()
+#     cube.ProjectCleanBinLibraries('current')
+#
+#     cube.ProjectAddBinLibraries()
+#
+#     cube.ProjectCleanSrcARM()
+#     cube.ProjectCleanSrc()
+#
+#     cube.ProjectAddSrc()
+# #     cube.ProjectSave()
+# #     cube.ProjectPrint("./.cproject")
+#     cube.UndoSave()
