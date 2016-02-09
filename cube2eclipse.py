@@ -41,7 +41,7 @@ BINLIBPATH = ("Drivers/CMSIS/Lib/GCC",)
 SYSTEMC = "system_stm32{}{}xx.c"
 SYSTEMPATH = "Drivers/CMSIS/Device/ST/STM32{}{}xx/Source/Templates"
 
-STARTUP = "startup_stm32{}{}0{}x{}.s"
+STARTUP = "startup_stm32{}{}0{}x{}.{}"
 STARTUPPATH = "Drivers/CMSIS/Device/ST/STM32{}{}xx/Source/Templates/gcc"
 
 class cube2eclipse():
@@ -51,6 +51,7 @@ class cube2eclipse():
     MCUr = re.compile(MCURE)
 
 # TODO componenttype should be an Enum
+# TODO consolidate the use of common path syscalls, systemfile etc...
 
     def CleanList(self, xmllist):
       for e in xmllist:
@@ -115,7 +116,7 @@ class cube2eclipse():
       self.MCUp = re.match(self.MCUr, self.MCU).groups()
 
     def LibraryIncludeGet(self):
-      return ('"${project_loc:/STCube/inc"',)
+      return ('"${project_loc:/STCube/Inc"',)
 
     def UndoSave(self):
       self.TreePrint(self.undo, os.path.join(self.projectpath, '.cprojectundo'))
@@ -141,7 +142,7 @@ class cube2eclipse():
         else:
           self.includes = self.IncludeScan()
           self.IncludeSave()
-        self.includes.extend(self.LibraryIncludeGet())
+      self.includes.extend(self.LibraryIncludeGet())
       self.CubeProjectLoad()
 
     def ProjectLoad(self, project, wipe):
@@ -275,14 +276,13 @@ class cube2eclipse():
       etree.SubElement(uldlib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts')})
 
     def ProjectImportStartup(self):
-      startupfile = os.path.join(self.cubelibrary, STARTUPPATH.format(self.MCUp[0], self.MCUp[1]), STARTUP.format(self.MCUp[0].lower(), self.MCUp[1].lower(), self.MCUp[2].lower(), self.MCUp[4].lower()))
-      shutil.copy2(startupfile, os.path.join(self.projectpath, 'ldscripts'))
+      startupfilesrc = os.path.join(self.cubelibrary, STARTUPPATH.format(self.MCUp[0], self.MCUp[1]),
+                                 STARTUP.format(self.MCUp[0].lower(), self.MCUp[1].lower(), self.MCUp[2].lower(), self.MCUp[4].lower(), 's'))
+      startupfiledst = STARTUP.format(self.MCUp[0].lower(), self.MCUp[1].lower(), self.MCUp[2].lower(), self.MCUp[4].lower(), 'S')
+      shutil.copy2(startupfilesrc, os.path.join(self.projectpath, 'ldscripts', startupfiledst))
       # undo
       etree.SubElement(self.undolibrary, 'startup',
-                       {'value': os.path.join(
-                                              self.projectpath, 'ldscripts',
-                                              STARTUP.format(self.MCUp[0].lower(), self.MCUp[1].lower(), self.MCUp[2].lower(), self.MCUp[4].lower())
-                                              )})
+                       {'value': os.path.join(self.projectpath, 'ldscripts', startupfiledst)})
 
     def ProjectCleanDef(self, componenttype='current'):
       optionpath = '//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="definedSymbols"]/listOptionValue'
@@ -320,19 +320,28 @@ class cube2eclipse():
 
     def ProjectCleanSrc(self):
       systemfile = os.path.join(self.projectpath, 'ldscripts', SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
+      syscallsfile = os.path.join(self.projectpath, 'ldscripts', 'syscalls.c')
       try:
         os.remove(systemfile)
+        os.remove(syscallsfile)
         shutil.rmtree(os.path.join(self.projectpath, LIBRARYNAME))
       except FileNotFoundError:
         pass
 
     # TODO ProjectAddSrc should accept a list of dirs
-    # TODO ProjectAddSrc should be separated in Source + systemfile copy or "special file" copy
+    # TODO ProjectAddSrc should be separated in Source + "special file" copy (system, startup, syscalls...)
     def ProjectAddSrc(self):
+      # system file
       systemfile = os.path.join(self.cubelibrary, SYSTEMPATH.format(self.MCUp[0], self.MCUp[1]), SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
       shutil.copy2(systemfile, os.path.join(self.projectpath, 'ldscripts'))
       # undo
       etree.SubElement(self.undolibrary, 'system', {'value': os.path.join(self.projectpath, 'ldscripts', SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))})
+      # syscalls file
+      syscallsfile = os.path.join(codepath, 'syscalls.c')
+      shutil.copy2(syscallsfile, os.path.join(self.projectpath, 'ldscripts'))
+      # undo
+      etree.SubElement(self.undolibrary, 'syscalls', {'value': os.path.join(self.projectpath, 'syscalls.c')})
+      # Library
       dst = os.path.join(self.projectpath, LIBRARYNAME)
       try:
         os.mkdir(dst, mode=0o770)
@@ -346,6 +355,7 @@ class cube2eclipse():
       etree.SubElement(symlink, 'listOptionValue', value=os.path.join(dst, 'Drivers'))
       etree.SubElement(symlink, 'listOptionValue', value=os.path.join(dst, 'Middlewares'))
       etree.SubElement(symlink, 'listOptionValue', value=os.path.join(dst, 'Utilities'))
+      # Code
       try:
         shutil.rmtree(os.path.join(self.projectpath, LIBRARYNAME, 'Inc'))
         shutil.rmtree(os.path.join(self.projectpath, LIBRARYNAME, 'Src'))
@@ -439,6 +449,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    codepath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'code')
     cube = cube2eclipse(args.cubeproject, args.cubelibrary, args.includecache, args.refresh)
 
     cube.ProjectLoad(args.project, args.wipe)
