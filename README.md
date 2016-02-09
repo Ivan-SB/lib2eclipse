@@ -1,10 +1,10 @@
 # lib2eclipse
 
 ## Overview
-This program was originally conceived to import CubeMX projects into GNU ARM Eclipse plugin http://gnuarmeclipse.github.io/
+This program was originally conceived to import CubeMX projects into GNU ARM Eclipse plugin http://gnuarmeclipse.github.io/  
 At this stage it can only do that.
 
-However it has some methods that could be used in a more general way to import and relocate external libraries into C projects without them being located in the workspace.
+However it has some methods that could be used in a more general way to import and relocate external libraries into C projects without them being located in the workspace.  
 This means that if you need to use a library in an GNU ARM Eclipse C/C++ project:
 * you won't have to add all include paths by hand
 * you will be helped to update all include paths if you relocate the library
@@ -14,7 +14,11 @@ This means that if you need to use a library in an GNU ARM Eclipse C/C++ project
 1. Download the CubeMX library from ST website and unzip it somewhere
 2. Create a CubeMX project somewhere
 3. Create a GNU ARM Eclipse project for your ST family
-4. Use this tool
+4. Optionally if you've installed GNU ARM plugins packs set the project > Proprieties > C/C++ Build > Settings > Devices
+5. close the project
+6. Use this tool
+7. Refresh your C project (F5)
+I noticed that sometimes you've to close/reopen a prooject more than once before Eclipse get aware of all the changes to get a successful build. 
 
 ### Examples
 #### first install over a fresh GNU ARM STM32 project
@@ -26,6 +30,10 @@ This means that if you need to use a library in an GNU ARM Eclipse C/C++ project
 unzip somewhere else the CubeMX library
 ./cube2eclipse.py -c [path to your CubeMX project] -l [path to the CubeMX NEW library] -p [path to your GNU ARM Eclipse project] -a install
 this will replace all includes, source etc... with new ones leaving untouched everything you wrote outside of the STCube dir
+
+## Semihosting & Co.
+Liviu Ionescu had done a great work providing support for different trace strategies but I'm a humble programmer and I found I could just manage a simpler approach.
+So I distilled a simpler systemcalls.c version that works with CubeMX ldscript.
 
 ## TODO
 Importing CubeMX projects into Eclipse requires some specialized additional steps than just adding include path and some symlink into Eclipse workspace:
@@ -41,6 +49,7 @@ Since I'm linking most of CubeMX library including examples, BSP etc... inside t
 Some of this stuff may cause compilation errors because of missing configuration files (mostly stuff in Middleware), some may cause errors because of redefinition of functions or because they are templates.
 
 * Drivers/CMSIS/Device/ST/STM32..xx/Source/Templates
+* Drivers/STM32...xxx/Src/stm32..._template.c
 Should be excluded.
 * Stuff in Middleware should be excluded if you don't need it.
 * Stuff in
