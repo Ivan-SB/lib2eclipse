@@ -18,13 +18,17 @@ This means that if you need to use a library in an GNU ARM Eclipse C/C++ project
 5. close the project
 6. Use this tool
 7. Refresh your C project (F5)
-I noticed that sometimes you've to close/reopen a prooject more than once before Eclipse get aware of all the changes to get a successful build. 
+I noticed that sometimes you've to close/reopen a prooject more than once before Eclipse get aware of all the changes to get a successful build.
+
+Currently the program makes a backup of your .cproject file and still it doesn't overwrite the original one, rather it saves a new one in the working directory.
+You'd have to manually copy the generated .cproject over the Eclipse one.
+This is going to change as soon as I'll be more confident in the code.  
 
 ### Examples
 #### first install over a fresh GNU ARM STM32 project
 ./cube2eclipse.py -c [path to your CubeMX project] -l [path to the CubeMX library] -p [path to your GNU ARM Eclipse project] -a install -w
 -w is needed to cleanup not useful directories and settings of GNU ARM project.
-#### removal code and configuration related to CubeMX
+#### remove code and configuration related to CubeMX
 ./cube2eclipse.py -c [path to your CubeMX project] -l [path to the CubeMX library] -p [path to your GNU ARM Eclipse project] -a remove
 #### installation of a new version of CubeMX library or a CubeMX project generated with a new CubeMX tool
 unzip somewhere else the CubeMX library
