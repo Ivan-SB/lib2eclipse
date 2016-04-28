@@ -46,7 +46,10 @@ STARTUPPATH = "Drivers/CMSIS/Device/ST/STM32{}{}xx/Source/Templates/gcc"
 
 class cube2eclipse():
     """docstring"""
-    EXCLUDE = ('/Projects/', '/DSP_Lib/Examples/', '/RTOS/Template')
+    EXCLUDE = ('/Projects', '/DSP_Lib/Examples',
+               '/RTOS/Template',
+               '/portable/IAR', '/portable/Keil', '/portable/RVDS', '/portable/GCC',
+               '/portable/Tasking')
     EXCLUDEr = re.compile("|".join(EXCLUDE))
     MCUr = re.compile(MCURE)
 
@@ -92,12 +95,17 @@ class cube2eclipse():
     def CubeProjectLoad(self):
       projectdir = os.path.normpath(os.path.expanduser(self.cubeproject))
       projectname = os.path.basename(projectdir)
-      eclipseproject = os.path.join(projectdir, STMDIR, projectname + ' Configuration')
+      eclipseproject = os.path.join(projectdir, STMDIR, projectname)
       cproject = os.path.join(eclipseproject, '.cproject')
       if os.path.isfile(cproject) and os.access(cproject, os.R_OK):
         self.cubecproject = etree.parse(open(cproject, "r"))
       else:
         sys.exit("{} can't be opened for reading".format(cproject))
+#       project  = os.path.join(eclipseproject, '.project')
+#       if os.path.isfile(project) and os.access(project, os.R_OK):
+#         self.cubeproject = etree.parse(open(project, "r"))
+#       else:
+#         sys.exit("{} can't be opened for reading".format(project))
       self.CubeLibraryCheck()
       self.CubeGetInfo()
       self.ldscript = os.path.join(eclipseproject, LDSCRIPT.format(self.MCU))
@@ -114,9 +122,30 @@ class cube2eclipse():
       options = self.cubecproject.xpath('//option[@name="Mcu" and @superClass="fr.ac6.managedbuild.option.gnu.cross.mcu"]')[0]
       self.MCU = options.attrib["value"]
       self.MCUp = re.match(self.MCUr, self.MCU).groups()
+    
+    def GetCM(self, code):
+#       L0 F0 CM0
+#       L1 F1 F2 CM3
+#       L4 F3 F4 CM4
+#       F7 CM7
+      if (code == '0'):
+        cm = '0'
+      elif (code == '1' or code == '2'):
+        cm = '3'
+      elif (code == '3' or  code == '4'):
+        cm = '4'
+      elif (code == '7' ):
+        cm = '7'
+      else:
+        pass
+      return cm
 
     def LibraryIncludeGet(self):
-      return ('"${project_loc:/STCube/Inc"',)
+      # TODO should include /portable/Tasking and other subdirs
+      return (
+              os.path.join(self.cubelibrary, 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/', 'ARM_CM' + self.GetCM(self.MCUp[1])),
+              '"${workspace_loc:/${ProjName}/STCube/Inc}"'
+              )
 
     def UndoSave(self):
       self.TreePrint(self.undo, os.path.join(self.projectpath, '.cprojectundo'))
@@ -142,8 +171,8 @@ class cube2eclipse():
         else:
           self.includes = self.IncludeScan()
           self.IncludeSave()
-      self.includes.extend(self.LibraryIncludeGet())
       self.CubeProjectLoad()
+      self.includes.extend(self.LibraryIncludeGet())
 
     def ProjectLoad(self, project, wipe):
       cproject = os.path.join(project, '.cproject')
@@ -291,7 +320,7 @@ class cube2eclipse():
 
     def GetMathLib(self):
       # TODO ARM_MATH_CM0PLUS vs ARM_MATH_CM0
-      return 'ARM_MATH_CM' + self.MCUp[1]
+      return 'ARM_MATH_CM' + self.GetCM(self.MCUp[1])
 
     def ProjectAddDef(self):
       mathlib = self.GetMathLib()
