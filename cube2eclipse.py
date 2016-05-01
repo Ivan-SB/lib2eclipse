@@ -229,18 +229,32 @@ class cube2eclipse():
       for l in self.includes:
           etree.SubElement(uinclude, 'listOptionValue', {'builtin': 'false', "value": '{}'.format(l)})
 
+    def GetExcludeSrc(self):
+      excluding = "STCube/Middlewares/ST|STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7|STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F|STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM3_MPU|STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM0|STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_5.c|STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_3.c|STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_2.c|STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_1.c|STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/Tasking|STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS|STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/Keil|STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/IAR|STCube/Middlewares/Third_Party/LwIP|STCube/Middlewares/Third_Party/FatFs|STCube/tools|STCube/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_msp_template.c|STCube/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates|STCube/Drivers/CMSIS/RTOS|STCube/Drivers/CMSIS/DSP_Lib|STCube/Drivers/BSP|STCube/Utilities"
+      return excluding
+
     def ProjectCleanExcludeSrc(self, componenttype='current'):
-      uexcluding = self.previousundolibrary.xpath('entry')
-      if componenttype == 'all':
-        pass
+      if hasattr(self, 'previousundolibrary'):
+        uexcluding = self.previousundolibrary.xpath('entry')
+        mergeremove = uexcluding[0].get('excluding')
       else:
-        entry = self.project.xpath('//storageModule/cconfiguration/storageModule[@moduleId="cdtBuildSystem"]/configuration/sourceEntries/entry[@excluding]')
+        mergeremove = ""
+      entry = self.project.xpath('//storageModule/cconfiguration/storageModule[@moduleId="cdtBuildSystem"]/configuration/sourceEntries/entry[@excluding]')
+      if componenttype == 'all':
+#         FIXME even if wipe it doesn't pass from here
+        for e in entry:
+          e.getparent().remove(e)
+      else:
         for e in entry:
           excluding = e.get('excluding')
-          
+          cleanexcluding = list(set(excluding.split('|')) - set(mergeremove.split('|')))
+          if len(cleanexcluding)>0:
+            e.attrib['excluding'] = '|'.join(cleanexcluding)
+          else:
+            e.getparent().remove(e)
+    
     def ProjectAddExcludeSrc(self):
-      # TODO fill newexcluding
-      newexcluding = ""
+      newexcluding = self.GetExcludeSrc()
       newexcludinglist = newexcluding.split('|')
       mergeremove = []
       cfg = self.project.xpath('//storageModule/cconfiguration/storageModule[@moduleId="cdtBuildSystem"]/configuration')
@@ -258,7 +272,7 @@ class cube2eclipse():
               mergeexcluding = list(set(excluding.split('|')) | set(newexcludinglist))
               mergeremove = list(set(newexcludinglist) - set(excluding.split('|')))
               e.attrib['excluding'] = '|'.join(mergeexcluding)
-          self.TreePrint(s, None)
+      # undo
       etree.SubElement(self.undolibrary, 'entry', {'excluding': '|'.join(mergeremove)})
 
     def BinLibrariesScan(self):
@@ -445,6 +459,7 @@ class cube2eclipse():
       self.ProjectCleanBinLibraries(wipe)
       self.ProjectCleanSrcARM()
       self.ProjectCleanSrc()
+      self.ProjectCleanExcludeSrc(wipe)
       self.ProjectPrint("./.cproject")
 #       XXX should I remove undo section?
 
