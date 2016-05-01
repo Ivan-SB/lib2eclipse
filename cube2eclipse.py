@@ -98,12 +98,12 @@ class cube2eclipse():
       eclipseproject = os.path.join(projectdir, STMDIR, projectname)
       cproject = os.path.join(eclipseproject, '.cproject')
       if os.path.isfile(cproject) and os.access(cproject, os.R_OK):
-        self.cubecproject = etree.parse(open(cproject, "r"))
+        self.cubecprojectx = etree.parse(open(cproject, "r"))
       else:
         sys.exit("{} can't be opened for reading".format(cproject))
 #       project  = os.path.join(eclipseproject, '.project')
 #       if os.path.isfile(project) and os.access(project, os.R_OK):
-#         self.cubeproject = etree.parse(open(project, "r"))
+#         self.cubeprojectx = etree.parse(open(project, "r"))
 #       else:
 #         sys.exit("{} can't be opened for reading".format(project))
       self.CubeLibraryCheck()
@@ -119,7 +119,7 @@ class cube2eclipse():
         sys.exit("{} doesn't look as the Cube Library directory".format(self.cubelibrary))
 
     def CubeGetInfo(self):
-      options = self.cubecproject.xpath('//option[@name="Mcu" and @superClass="fr.ac6.managedbuild.option.gnu.cross.mcu"]')[0]
+      options = self.cubecprojectx.xpath('//option[@name="Mcu" and @superClass="fr.ac6.managedbuild.option.gnu.cross.mcu"]')[0]
       self.MCU = options.attrib["value"]
       self.MCUp = re.match(self.MCUr, self.MCU).groups()
     
@@ -229,6 +229,19 @@ class cube2eclipse():
       for l in self.includes:
           etree.SubElement(uinclude, 'listOptionValue', {'builtin': 'false', "value": '{}'.format(l)})
 
+    def ProjectCleanExcludeSrc(self):
+      pass
+          
+#     def ProjectAddExcludeSrc(self):
+#       # loop in all storageModule/configuration
+#       # check if sourceEntries/entry exists
+#       # if not create it
+#       # fill it
+#       cfg = self.project.xpath('//storageModule[@moduleId="cdtBuildSystem"]/configuration')
+#       for c in cfg:
+#         s = c.xpath('//sourceEntries')
+# #       /sourceEntries/entry
+
     def BinLibrariesScan(self):
       return BINLIBPATH
 
@@ -326,7 +339,7 @@ class cube2eclipse():
       mathlib = self.GetMathLib()
       define = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="definedSymbols"]')
       definev = []
-      definesrc = self.cubecproject.xpath('//option[@superClass="gnu.c.compiler.option.preprocessor.def.symbols" and @valueType="definedSymbols"]/listOptionValue')
+      definesrc = self.cubecprojectx.xpath('//option[@superClass="gnu.c.compiler.option.preprocessor.def.symbols" and @valueType="definedSymbols"]/listOptionValue')
       for sd in definesrc:
         definev.append(sd.attrib['value'])
       for d in define:
