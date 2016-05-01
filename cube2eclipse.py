@@ -229,18 +229,37 @@ class cube2eclipse():
       for l in self.includes:
           etree.SubElement(uinclude, 'listOptionValue', {'builtin': 'false', "value": '{}'.format(l)})
 
-    def ProjectCleanExcludeSrc(self):
-      pass
+    def ProjectCleanExcludeSrc(self, componenttype='current'):
+      uexcluding = self.previousundolibrary.xpath('entry')
+      if componenttype == 'all':
+        pass
+      else:
+        entry = self.project.xpath('//storageModule/cconfiguration/storageModule[@moduleId="cdtBuildSystem"]/configuration/sourceEntries/entry[@excluding]')
+        for e in entry:
+          excluding = e.get('excluding')
           
-#     def ProjectAddExcludeSrc(self):
-#       # loop in all storageModule/configuration
-#       # check if sourceEntries/entry exists
-#       # if not create it
-#       # fill it
-#       cfg = self.project.xpath('//storageModule[@moduleId="cdtBuildSystem"]/configuration')
-#       for c in cfg:
-#         s = c.xpath('//sourceEntries')
-# #       /sourceEntries/entry
+    def ProjectAddExcludeSrc(self):
+      # TODO fill newexcluding
+      newexcluding = ""
+      newexcludinglist = newexcluding.split('|')
+      mergeremove = []
+      cfg = self.project.xpath('//storageModule/cconfiguration/storageModule[@moduleId="cdtBuildSystem"]/configuration')
+      for c in cfg:
+        src = c.xpath('.//sourceEntries')
+        if len(src)<=0:
+          src = etree.SubElement(c, 'sourceEntries')
+        for s in src:
+          entry = s.xpath('.//entry[@excluding]')
+          if len(entry)<=0:
+            entry =  etree.SubElement(s, 'entry', {'excluding': newexcluding, 'flags': 'VALUE_WORKSPACE_PATH|RESOLVED', 'kind': 'sourcePath', 'name': ''})
+          else:
+            for e in entry:
+              excluding = e.get('excluding')
+              mergeexcluding = list(set(excluding.split('|')) | set(newexcludinglist))
+              mergeremove = list(set(newexcludinglist) - set(excluding.split('|')))
+              e.attrib['excluding'] = '|'.join(mergeexcluding)
+          self.TreePrint(s, None)
+      etree.SubElement(self.undolibrary, 'entry', {'excluding': '|'.join(mergeremove)})
 
     def BinLibrariesScan(self):
       return BINLIBPATH
@@ -448,6 +467,7 @@ class cube2eclipse():
       self.ProjectCleanSrcARM()
       self.ProjectCleanSrc()
       self.ProjectAddSrc()
+      self.ProjectAddExcludeSrc()
       self.ProjectPrint("./.cproject")
       self.UndoSave()
 
