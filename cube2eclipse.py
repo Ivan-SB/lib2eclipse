@@ -291,7 +291,7 @@ class cube2eclipse():
         for s in src:
           entry = s.xpath('.//entry[@excluding]')
           if len(entry)<=0:
-            entry =  etree.SubElement(s, 'entry', {'excluding': newexcluding, 'flags': 'VALUE_WORKSPACE_PATH|RESOLVED', 'kind': 'sourcePath', 'name': ''})
+            entry =  etree.SubElement(s, 'entry', {'excluding': "|".join(newexcludinglist), 'flags': 'VALUE_WORKSPACE_PATH|RESOLVED', 'kind': 'sourcePath', 'name': ''})
           else:
             for e in entry:
               excluding = e.get('excluding')
