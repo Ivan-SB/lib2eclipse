@@ -255,7 +255,7 @@ class cube2eclipse():
           if not re.search(dirpath, 'ARM_CM' + self.GetCM(self.MCUp[1])):
             MCUport.append(os.path.join(LIBRARYNAME, 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC', dirpath))
             #       STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_5.c
-        excluding = excluding + LwIPlib + FatFslib + compilers + MCUport
+        excluding = excluding + Tasking + LwIPlib + FatFslib + compilers + MCUport
       else:
         excluding = excluding + LwIPlib + FatFslib + FreeRTOS
       return excluding
