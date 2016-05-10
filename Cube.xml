@@ -1,0 +1,21 @@
+<library name="STCube">
+	<include source="Scan">
+	<xpath>
+		<add value='//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="includePath"]'>
+		<clean value='//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="includePath"]/listOptionValue'>
+	</xpath>
+	
+	<exclude>
+		<listValueOption value="" />
+		<listValueOption value="" />
+	</exclude>
+	
+	</include>
+	<src>
+	<filecopy>
+		<listValueOption src="" dst="" />
+		<listValueOption src="" dst="" />
+		<listValueOption src="" dst="" />
+	</filecopy>
+	</src>
+</library>
