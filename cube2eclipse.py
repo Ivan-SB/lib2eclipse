@@ -247,6 +247,7 @@ class cube2eclipse():
       FatFslib= ["STCube/Middlewares/Third_Party/FatFs"]
       
       Tasking = ["STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/Tasking"]
+      freertos = ["STCube/Src/freertos.c"]
       compilers = ["Middleware/Third_Party/FreeRTOS/Source/portable/IAR", "Middleware/Third_Party/FreeRTOS/Source/portable/Keil", "Middleware/Third_Party/FreeRTOS/Source/portable/RVDS"]
       if 'freertos' in self.components:
         FreeRTOSport = os.path.join(self.projectpath, LIBRARYNAME, 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC')
@@ -255,7 +256,7 @@ class cube2eclipse():
           if not re.search(dirpath, 'ARM_CM' + self.GetCM(self.MCUp[1])):
             MCUport.append(os.path.join(LIBRARYNAME, 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC', dirpath))
             #       STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_5.c
-        excluding = excluding + Tasking + LwIPlib + FatFslib + compilers + MCUport
+        excluding = excluding + Tasking + LwIPlib + FatFslib + compilers + MCUport + freertos
       else:
         excluding = excluding + LwIPlib + FatFslib + FreeRTOS
       return excluding
@@ -468,6 +469,32 @@ class cube2eclipse():
       src = etree.SubElement(self.undolibrary, 'src')
       etree.SubElement(src, 'listOptionValue', value=os.path.join(self.projectpath, LIBRARYNAME, 'Inc'))
       etree.SubElement(src, 'listOptionValue', value=os.path.join(self.projectpath, LIBRARYNAME, 'Src'))
+      
+    def ProjectSourceMangle(self):
+      if 'freertos' in self.components:
+        with open(os.path.join(self.projectpath, LIBRARYNAME, 'Src/main.c'), 'r+') as f:
+          oldmain = f.read()
+          f.seek(0)
+          newmain = re.sub('#include "cmsis_os.h"', '//#include "cmsis_os.h"', oldmain)
+          newmain = re.sub('void MX_FREERTOS_Init\(void\);', '//void MX_FREERTOS_Init(void);', newmain)
+          newmain = re.sub('MX_FREERTOS_Init\(\);', '//MX_FREERTOS_Init();', newmain)
+          newmain = re.sub('osKernelStart\(\);', '//osKernelStart();', newmain)
+          f.write(newmain)
+
+#     /* queue to manage delays */
+#     xQueuePhase = xQueueCreate((unsigned portBASE_TYPE)1, (unsigned portBASE_TYPE)sizeof(signed portCHAR));
+#     /* mutex to manage status */
+#     xStatusMutex = xSemaphoreCreateMutex();
+#     xDateMutex = xSemaphoreCreateMutex();
+#     xTaskCreate(
+#       vI2CTask
+#       ,  (const signed portCHAR *)"I2C"
+#       ,  configMINIMAL_STACK_SIZE
+#       ,  NULL
+#       ,  I2C_PRIORITY
+#       ,  &xI2CHandle );
+#     vTaskSuspend(xThermostateHandle);
+#     vTaskStartScheduler();
 
     def ProjectBackup(self):
       shutil.copy2(os.path.join(self.projectpath, '.cproject'), os.path.join(self.projectpath, '.cproject.bak'))
@@ -509,6 +536,7 @@ class cube2eclipse():
       self.ProjectCleanSrc()
       self.ProjectAddSrc()
       self.ProjectAddExcludeSrc()
+      self.ProjectSourceMangle()
       self.ProjectPrint("./.cproject")
       self.UndoSave()
 
