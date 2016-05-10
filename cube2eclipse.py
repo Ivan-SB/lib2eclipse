@@ -474,7 +474,7 @@ class cube2eclipse():
       if 'freertos' in self.components:
         with open(os.path.join(self.projectpath, LIBRARYNAME, 'Src/main.c'), 'r+') as f:
           oldmain = f.read()
-          f.seek(0)
+          f.truncate()
           newmain = re.sub('#include "cmsis_os.h"', '//#include "cmsis_os.h"', oldmain)
           newmain = re.sub('void MX_FREERTOS_Init\(void\);', '//void MX_FREERTOS_Init(void);', newmain)
           newmain = re.sub('MX_FREERTOS_Init\(\);', '//MX_FREERTOS_Init();', newmain)
