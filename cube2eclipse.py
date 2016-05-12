@@ -475,11 +475,12 @@ class cube2eclipse():
     def ProjectSourceMangle(self):
       if 'freertos' in self.components:
         # probably better to not edit main.c but just add a setup.c file that define MX_FREERTOS_Init and don't comment cmsis_os.h
+#         with tempfile.mkstemp() as f:
+#           pass
         with open(os.path.join(self.projectpath, LIBRARYNAME, 'Src/main.c'), 'r+') as f:
           # FIXME main written 2 times or with rubbish at the end
           oldmain = f.read()
-          f.truncate()
-#           f.seek(0)
+          f.truncate(0)
           newmain = re.sub('#include "cmsis_os.h"', '//#include "cmsis_os.h"', oldmain)
           newmain = re.sub('void MX_FREERTOS_Init\(void\);', '//void MX_FREERTOS_Init(void);', newmain)
           newmain = re.sub('MX_FREERTOS_Init\(\);', '//MX_FREERTOS_Init();', newmain)
