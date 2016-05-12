@@ -50,7 +50,8 @@ class cube2eclipse():
                '/RTOS/Template',
                '/portable/IAR', '/portable/Keil', '/portable/RVDS', '/portable/GCC',
                '/portable/Tasking')
-    EXCLUDEr = re.compile("|".join(EXCLUDE))
+    combined = "(?:" + ")|(?:".join(EXCLUDE) + ")"
+    EXCLUDEr = re.compile(combined)
     MCUr = re.compile(MCURE)
 
 # TODO componenttype should be an Enum
@@ -188,10 +189,11 @@ class cube2eclipse():
       self.UndoLoad()
 
     def IncludeScan(self):
+      # FIXME add FreeRTOS includes conditionally
       includes = []
-      for dirpath, _, filenames in os.walk(self.cubelibrary):
+      for dirpath, _, filenames in os.walk(self.cubelibrary, followlinks=True):
         for f in filenames:
-          if os.path.splitext(f)[1].lower() in HEADERS and not self.IncludeExclude(dirpath):
+          if (os.path.splitext(f)[1].lower() in HEADERS) and (not self.IncludeExclude(dirpath)):
             includes.append(dirpath)
             break
       return includes
@@ -248,7 +250,7 @@ class cube2eclipse():
       
       Tasking = ["STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/Tasking"]
       freertos = ["STCube/Src/freertos.c"]
-      compilers = ["Middleware/Third_Party/FreeRTOS/Source/portable/IAR", "Middleware/Third_Party/FreeRTOS/Source/portable/Keil", "Middleware/Third_Party/FreeRTOS/Source/portable/RVDS"]
+      compilers = ["STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/IAR", "STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/Keil", "STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS"]
       if 'freertos' in self.components:
         FreeRTOSport = os.path.join(self.projectpath, LIBRARYNAME, 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC')
         MCUport = []
@@ -472,9 +474,12 @@ class cube2eclipse():
       
     def ProjectSourceMangle(self):
       if 'freertos' in self.components:
+        # probably better to not edit main.c but just add a setup.c file that define MX_FREERTOS_Init and don't comment cmsis_os.h
         with open(os.path.join(self.projectpath, LIBRARYNAME, 'Src/main.c'), 'r+') as f:
+          # FIXME main written 2 times or with rubbish at the end
           oldmain = f.read()
           f.truncate()
+#           f.seek(0)
           newmain = re.sub('#include "cmsis_os.h"', '//#include "cmsis_os.h"', oldmain)
           newmain = re.sub('void MX_FREERTOS_Init\(void\);', '//void MX_FREERTOS_Init(void);', newmain)
           newmain = re.sub('MX_FREERTOS_Init\(\);', '//MX_FREERTOS_Init();', newmain)
@@ -495,6 +500,11 @@ class cube2eclipse():
 #       ,  &xI2CHandle );
 #     vTaskSuspend(xThermostateHandle);
 #     vTaskStartScheduler();
+# add code to set up interrupt:
+#   add an include for setup functions
+#   call setup function in /* USER CODE BEGIN 2 */
+# add code for 
+
 
     def ProjectBackup(self):
       shutil.copy2(os.path.join(self.projectpath, '.cproject'), os.path.join(self.projectpath, '.cproject.bak'))
@@ -535,6 +545,7 @@ class cube2eclipse():
       self.ProjectCleanSrcARM()
       self.ProjectCleanSrc()
       self.ProjectAddSrc()
+      self.ProjectCleanExcludeSrc(wipe)
       self.ProjectAddExcludeSrc()
       self.ProjectSourceMangle()
       self.ProjectPrint("./.cproject")
