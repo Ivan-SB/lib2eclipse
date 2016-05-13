@@ -46,12 +46,6 @@ STARTUPPATH = "Drivers/CMSIS/Device/ST/STM32{}{}xx/Source/Templates/gcc"
 
 class cube2eclipse():
     """docstring"""
-    EXCLUDE = ('/Projects', '/DSP_Lib/Examples',
-               '/RTOS/Template',
-               '/portable/IAR', '/portable/Keil', '/portable/RVDS', '/portable/GCC',
-               '/portable/Tasking')
-    combined = "(?:" + ")|(?:".join(EXCLUDE) + ")"
-    EXCLUDEr = re.compile(combined)
     MCUr = re.compile(MCURE)
 
 # TODO componenttype should be an Enum
@@ -161,10 +155,20 @@ class cube2eclipse():
           self.previousundolibrary = previousundolibrary[0]
 
     def __init__(self, cubeproject, cubelibrary, includecache, refresh, components):
-      self.components = components.lower().split(',')
+      self.components = set(components.lower().split(','))
       self.cubeproject = cubeproject
       self.cubelibrary = cubelibrary
       self.includecache = includecache
+      # TODO possibly collecting includes and GetExcludeSrc() could be done in the same context/pass 
+      EXCLUDE = ('/Projects', '/DSP_Lib/Examples',
+                      '/RTOS/Template',
+                      '/portable/IAR', '/portable/Keil', '/portable/RVDS', '/portable/GCC',
+                      '/portable/Tasking')
+      if not ('freertos' in self.components):
+        EXCLUDE = EXCLUDE + ('/Middlewares/Third_Party/FreeRTOS')
+
+      combined = "(?:" + ")|(?:".join(EXCLUDE) + ")"
+      self.EXCLUDEr = re.compile(combined)
       if not self.includecache:
         self.includes = self.IncludeScan()
       else:
@@ -595,7 +599,6 @@ if __name__ == "__main__":
                         help='install | remove')
 
     args = parser.parse_args()
-    
 
     codepath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'code')
     cube = cube2eclipse(args.cubeproject, args.cubelibrary, args.includecache, args.refresh, args.components)
