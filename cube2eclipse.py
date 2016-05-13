@@ -161,26 +161,40 @@ class cube2eclipse():
       self.includecache = includecache
       # TODO possibly collecting includes and GetExcludeSrc() could be done in the same context/pass
       
+      self.USBDevice = ["STCube/Middlewares/ST/STM32_USB_Device_Library"]
+      self.USBHost = ["STCube/Middlewares/ST/STM32_USB_Host_Library"]
+      self.STemWin = ["STCube/Middlewares/ST/STemWin"]
+      
       self.FreeRTOS = ["STCube/Middlewares/Third_Party/FreeRTOS"]
       self.LwIPlib = ["STCube/Middlewares/Third_Party/LwIP"]
       self.FatFslib= ["STCube/Middlewares/Third_Party/FatFs"]
       
-      EXCLUDE = ['/Projects', '/DSP_Lib/Examples',
+      excluding = ['/Projects', '/DSP_Lib/Examples',
                       '/RTOS/Template',
                       '/portable/IAR', '/portable/Keil', '/portable/RVDS', '/portable/GCC',
                       '/portable/Tasking']
       
       if not ('freertos' in self.components):
-        EXCLUDE = EXCLUDE + self.FreeRTOS
+        excluding = excluding + self.FreeRTOS
       
       if not ('lwip' in self.components):
-        EXCLUDE = EXCLUDE + self.LwIPlib
+        excluding = excluding + self.LwIPlib
       
       if not ('fatfs' in self.components):
-        EXCLUDE = EXCLUDE + self.FatFslib
+        excluding = excluding + self.FatFslib
+      
+      if not ('usbdevice' in self.components):
+        excluding = excluding + self.USBDevice
+
+      if not ('usbhost' in self.components):
+        excluding = excluding + self.USBHost
         
-      combined = "(?:" + ")|(?:".join(EXCLUDE) + ")"
-      self.EXCLUDEr = re.compile(combined)
+      if not ('stemwin' in self.components):
+        excluding = excluding + self.STemWin
+        
+      combined = "(?:" + ")|(?:".join(excluding) + ")"
+      self.excludingR = re.compile(combined)
+
       if not self.includecache:
         self.includes = self.IncludeScan()
       else:
@@ -225,7 +239,7 @@ class cube2eclipse():
           f.write("\n")
 
     def IncludeExclude(self, dirpath):
-      return re.search(self.EXCLUDEr, dirpath)
+      return re.search(self.excludingR, dirpath)
 
     def ProjectCleanInclude(self, componenttype='current'):
       optionpath = '//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="includePath"]/listOptionValue'
@@ -251,12 +265,11 @@ class cube2eclipse():
     def GetExcludeSrc(self):
       templates = ["STCube/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_msp_template.c", "STCube/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates", "STCube/Drivers/CMSIS/RTOS"]
       DSPlib = ["STCube/Drivers/CMSIS/DSP_Lib"]
-      STlib = ["STCube/Middlewares/ST"]
       BSP = ["STCube/Drivers/BSP"]
       
       UT = ["STCube/Utilities"]
       
-      common = templates + DSPlib + STlib + BSP + UT
+      common = templates + DSPlib + BSP + UT
       
       excluding = common
       
@@ -280,6 +293,15 @@ class cube2eclipse():
 
       if not ('fatfs' in self.components):
         excluding = excluding + self.FatFslib
+
+      if not ('usbdevice' in self.components):
+        excluding = excluding + self.USBDevice
+
+      if not ('usbhost' in self.components):
+        excluding = excluding + self.USBHost
+      
+      if not ('stemwin' in self.components):
+        excluding = excluding + self.STemWin
 
       return excluding
 
