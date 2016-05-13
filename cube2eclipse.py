@@ -155,18 +155,30 @@ class cube2eclipse():
           self.previousundolibrary = previousundolibrary[0]
 
     def __init__(self, cubeproject, cubelibrary, includecache, refresh, components):
-      self.components = set(components.lower().split(','))
+      self.components = components
       self.cubeproject = cubeproject
       self.cubelibrary = cubelibrary
       self.includecache = includecache
-      # TODO possibly collecting includes and GetExcludeSrc() could be done in the same context/pass 
-      EXCLUDE = ('/Projects', '/DSP_Lib/Examples',
+      # TODO possibly collecting includes and GetExcludeSrc() could be done in the same context/pass
+      
+      self.FreeRTOS = ["STCube/Middlewares/Third_Party/FreeRTOS"]
+      self.LwIPlib = ["STCube/Middlewares/Third_Party/LwIP"]
+      self.FatFslib= ["STCube/Middlewares/Third_Party/FatFs"]
+      
+      EXCLUDE = ['/Projects', '/DSP_Lib/Examples',
                       '/RTOS/Template',
                       '/portable/IAR', '/portable/Keil', '/portable/RVDS', '/portable/GCC',
-                      '/portable/Tasking')
+                      '/portable/Tasking']
+      
       if not ('freertos' in self.components):
-        EXCLUDE = EXCLUDE + ('/Middlewares/Third_Party/FreeRTOS')
-
+        EXCLUDE = EXCLUDE + self.FreeRTOS
+      
+      if not ('lwip' in self.components):
+        EXCLUDE = EXCLUDE + self.LwIPlib
+      
+      if not ('fatfs' in self.components):
+        EXCLUDE = EXCLUDE + self.FatFslib
+        
       combined = "(?:" + ")|(?:".join(EXCLUDE) + ")"
       self.EXCLUDEr = re.compile(combined)
       if not self.includecache:
@@ -248,13 +260,10 @@ class cube2eclipse():
       
       excluding = common
       
-      FreeRTOS = ['"STCube/Middlewares/Third_Party/FreeRTOS']
-      LwIPlib = ["STCube/Middlewares/Third_Party/LwIP"]
-      FatFslib= ["STCube/Middlewares/Third_Party/FatFs"]
-      
       Tasking = ["STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/Tasking"]
       freertos = ["STCube/Src/freertos.c"]
       compilers = ["STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/IAR", "STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/Keil", "STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS"]
+      
       if 'freertos' in self.components:
         FreeRTOSport = os.path.join(self.projectpath, LIBRARYNAME, 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC')
         MCUport = []
@@ -262,9 +271,16 @@ class cube2eclipse():
           if not re.search(dirpath, 'ARM_CM' + self.GetCM(self.MCUp[1])):
             MCUport.append(os.path.join(LIBRARYNAME, 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC', dirpath))
             #       STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_5.c
-        excluding = excluding + Tasking + LwIPlib + FatFslib + compilers + MCUport + freertos
+        excluding = excluding + Tasking + compilers + MCUport + freertos
       else:
-        excluding = excluding + LwIPlib + FatFslib + FreeRTOS
+        excluding = excluding + self.FreeRTOS
+      
+      if not ('lwip' in self.components):
+        excluding = excluding + self.LwIPlib
+
+      if not ('fatfs' in self.components):
+        excluding = excluding + self.FatFslib
+
       return excluding
 
     def ProjectCleanExcludeSrc(self, componenttype='current'):
@@ -599,9 +615,14 @@ if __name__ == "__main__":
                         help='install | remove')
 
     args = parser.parse_args()
+    
+    availablecomponents = set(('freertos', 'usbdevice', 'usbhost', 'stemwin', 'fatfs', 'lwip'))
+    components = set(args.components.lower().split(','))
+    if not components <= availablecomponents:
+      sys.exit('There are no components named: {}'.format(', '.join(components - availablecomponents)))
 
     codepath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'code')
-    cube = cube2eclipse(args.cubeproject, args.cubelibrary, args.includecache, args.refresh, args.components)
+    cube = cube2eclipse(args.cubeproject, args.cubelibrary, args.includecache, args.refresh, components)
 
     cube.ProjectLoad(args.project, args.wipe)
     if args.action == 'install':
