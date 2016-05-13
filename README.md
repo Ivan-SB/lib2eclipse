@@ -26,7 +26,7 @@ This is going to change as soon as I'll be more confident in the code.
 
 ### Examples
 #### first install over a fresh GNU ARM STM32 project
-./cube2eclipse.py -c [path to your CubeMX project] -l [path to the CubeMX library] -p [path to your GNU ARM Eclipse project] -a install -w
+./cube2eclipse.py -c [path to your CubeMX project] -l [path to the CubeMX library] -p [path to your GNU ARM Eclipse project] -a install -w -mfreertos
 -w is needed to cleanup not useful directories and settings of GNU ARM project.
 #### remove code and configuration related to CubeMX
 ./cube2eclipse.py -c [path to your CubeMX project] -l [path to the CubeMX library] -p [path to your GNU ARM Eclipse project] -a remove
@@ -52,20 +52,16 @@ But the most tedious part of importing a library is setting up include paths and
 Since I'm linking most of CubeMX library including examples, BSP etc... inside the workspace, way too much stuff get compiled.
 Some of this stuff may cause compilation errors because of missing configuration files (mostly stuff in Middleware), some may cause errors because of redefinition of functions or because they are templates.
 
-* Drivers/CMSIS/Device/ST/STM32..xx/Source/Templates
-* Drivers/STM32...xxx/Src/stm32..._template.c
-Should be excluded.
-* Stuff in Middleware should be excluded if you don't need it.
-* Stuff in
-Drivers/CMSIS/DSP_Lib
-Drivers/BSP
+Now this program provide some help to exclude from build directories and files that will break the build and an option (-m) to conditionally add FreeRTOS and in the future other modules.
+
+To get things working as you need you may still check:
+* Middlewares
+* Drivers/CMSIS/DSP_Lib
+* Drivers/BSP
 because it may take way to long to compile and you'd use the compiled version of the math library or because you may miss configuration files
 * Utilities
 
-I find that excluding stuff from build is more convenient than:
-* having multiple copies of the library without some directory
-* copying the parts later
-I may add the feature to automatically exclude code that will SURELY cause problems and possibly guess from the CubeMX project which parts of Middleware should be enabled/disabled.
+If you've to use FreeRTOS you'll still have to chose manually which memory management to use (heap_N.c)
 
 ### Binary libraries
 Unfortunately at this moment I don't know how to generate numeric id for Eclipse .cproject
