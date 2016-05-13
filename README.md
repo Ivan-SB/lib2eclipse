@@ -18,6 +18,7 @@ This means that if you need to use a library in an GNU ARM Eclipse C/C++ project
 5. close the project
 6. Use this tool
 7. Refresh your C project (F5)
+8. Due to a problem in FreeRTOS disable Link-time optimizer
 I noticed that sometimes you've to close/reopen a prooject more than once before Eclipse get aware of all the changes to get a successful build.
 
 Currently the program makes a backup of your .cproject file and still it doesn't overwrite the original one, rather it saves a new one in the working directory.
@@ -34,6 +35,9 @@ This is going to change as soon as I'll be more confident in the code.
 unzip somewhere else the CubeMX library
 ./cube2eclipse.py -c [path to your CubeMX project] -l [path to the CubeMX NEW library] -p [path to your GNU ARM Eclipse project] -a install
 this will replace all includes, source etc... with new ones leaving untouched everything you wrote outside of the STCube dir
+### Modules
+You can enable FatFs, USBDevice, USBHost, STemWin, FreeRTOS, LwIP modules
+
 
 ## Semihosting & Co.
 Liviu Ionescu had done a great work providing support for different trace strategies but I'm a humble programmer and I found I could just manage a simpler approach.
