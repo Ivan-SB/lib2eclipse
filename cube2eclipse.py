@@ -137,10 +137,10 @@ class cube2eclipse():
 
     def LibraryIncludeGet(self):
       # TODO should include /portable/Tasking and other subdirs
-      return (
-              os.path.join(self.cubelibrary, 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/', 'ARM_CM' + self.GetCM(self.MCUp[1])),
-              '"${workspace_loc:/${ProjName}/STCube/Inc}"'
-              )
+      includes = ['"${workspace_loc:/${ProjName}/STCube/Inc}"']
+      if 'freertos' in self.components:
+        includes = includes + [os.path.join(self.cubelibrary, 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/', 'ARM_CM' + self.GetCM(self.MCUp[1]))]
+      return includes
 
     def UndoSave(self):
       self.TreePrint(self.undo, os.path.join(self.projectpath, '.cprojectundo'))
@@ -219,7 +219,6 @@ class cube2eclipse():
       self.UndoLoad()
 
     def IncludeScan(self):
-      # FIXME add FreeRTOS includes conditionally
       includes = []
       for dirpath, _, filenames in os.walk(self.cubelibrary, followlinks=True):
         for f in filenames:
@@ -520,7 +519,6 @@ class cube2eclipse():
 #         with tempfile.mkstemp() as f:
 #           pass
         with open(os.path.join(self.projectpath, LIBRARYNAME, 'Src/main.c'), 'r+') as f:
-          # FIXME main written 2 times or with rubbish at the end
           oldmain = f.read()
           f.truncate(0)
           newmain = re.sub('#include "cmsis_os.h"', '//#include "cmsis_os.h"', oldmain)
