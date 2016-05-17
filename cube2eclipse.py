@@ -50,7 +50,7 @@ class cube2eclipse():
 
 # TODO componenttype should be an Enum
 # TODO consolidate the use of common path syscalls, systemfile etc...
-
+# TODO set ilg.gnuarmeclipse.managedbuild.cross.option.optimization.lto to false for Debug
     def CleanList(self, xmllist):
       for e in xmllist:
         e.getparent().remove(e)
@@ -312,7 +312,6 @@ class cube2eclipse():
         mergeremove = ""
       entry = self.project.xpath('//storageModule/cconfiguration/storageModule[@moduleId="cdtBuildSystem"]/configuration/sourceEntries/entry[@excluding]')
       if componenttype == 'all':
-#         FIXME even if wipe it doesn't pass from here
         for e in entry:
           e.getparent().remove(e)
       else:
