@@ -38,6 +38,8 @@ this will replace all includes, source etc... with new ones leaving untouched ev
 ### Modules
 You can enable FatFs, USBDevice, USBHost, STemWin, FreeRTOS, LwIP modules
 
+## FreeRTOS
+I prefer to directly work with FreeRTOS in spite of using CMSIS OS wrapper, I've excluded from build freertos.c and I've added a freertos_setup.c and freertos_setup.h that contain an FreeRTOS initialization skeleton. But since STemWin and LwIP libraries still require cmsis_os.h I left it there.
 
 ## Semihosting & Co.
 Liviu Ionescu had done a great work providing support for different trace strategies but I'm a humble programmer and I found I could just manage a simpler approach.
