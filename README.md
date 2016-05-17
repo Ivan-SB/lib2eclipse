@@ -18,7 +18,7 @@ This means that if you need to use a library in an GNU ARM Eclipse C/C++ project
 5. close the project
 6. Use this tool
 7. Refresh your C project (F5)
-8. Due to a problem in FreeRTOS disable Link-time optimizer
+8. Due to a problem in FreeRTOS disable Link-time optimizer -flto (Proprieties > C/C++ Build > Settings > Optimization) [^1]
 I noticed that sometimes you've to close/reopen a prooject more than once before Eclipse get aware of all the changes to get a successful build.
 
 Currently the program makes a backup of your .cproject file and still it doesn't overwrite the original one, rather it saves a new one in the working directory.
@@ -75,3 +75,5 @@ This more concretely means in the case of GNU ARM plugin projects, it won't be a
 A workaround is to add a fake entry to
 Proprieties > C/C++ Build -> Settings > Cross ARM C Linker > Libraries
 a fake entry
+
+[^1]: https://gcc.gnu.org/wiki/LinkTimeOptimizationFAQ
