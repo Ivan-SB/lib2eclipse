@@ -168,11 +168,11 @@ class cube2eclipse():
       self.FreeRTOS = ["STCube/Middlewares/Third_Party/FreeRTOS"]
       self.LwIPlib = ["STCube/Middlewares/Third_Party/LwIP"]
       self.FatFslib= ["STCube/Middlewares/Third_Party/FatFs"]
-      
+ 
       excluding = ['/Projects', '/DSP_Lib/Examples',
                       '/RTOS/Template',
-                      '/portable/IAR', '/portable/Keil', '/portable/RVDS', '/portable/GCC',
-                      '/portable/Tasking']
+                      '/FreeRTOS/Source/portable/'
+                  ]
       
       if not ('freertos' in self.components):
         excluding = excluding + self.FreeRTOS
@@ -272,18 +272,19 @@ class cube2eclipse():
       
       excluding = common
       
-      Tasking = ["STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/Tasking"]
       freertos = ["STCube/Src/freertos.c"]
-      compilers = ["STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/IAR", "STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/Keil", "STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS"]
       
       if 'freertos' in self.components:
-        FreeRTOSport = os.path.join(self.projectpath, LIBRARYNAME, 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC')
+        FreeRTOSport = os.path.join(self.projectpath, LIBRARYNAME, 'Middlewares/Third_Party/FreeRTOS/Source/portable')
+        basepath = os.path.join(self.projectpath)
         MCUport = []
-        for dirpath in os.listdir(FreeRTOSport):
-          if not re.search(dirpath, 'ARM_CM' + self.GetCM(self.MCUp[1])):
-            MCUport.append(os.path.join(LIBRARYNAME, 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC', dirpath))
-            #       STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_5.c
-        excluding = excluding + Tasking + compilers + MCUport + freertos
+        for dirpath, _, _ in os.walk(FreeRTOSport, followlinks=True):
+          if not re.search('(?:GCC/ARM_CM' + self.GetCM(self.MCUp[1] ) + '$)|(?:GCC$)|(?:portable$)|(?:MemMang)', dirpath):
+            srcpath = os.path.relpath(dirpath, basepath)
+            MCUport.append(srcpath)
+            # TODO exclude heap_N.c with the exception of selected one from argparse
+            # STCube/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_5.c
+        excluding = excluding + MCUport + freertos
       else:
         excluding = excluding + self.FreeRTOS
       
@@ -475,6 +476,7 @@ class cube2eclipse():
     # TODO ProjectAddSrc should accept a list of dirs
     # TODO ProjectAddSrc should be separated in Source + "special file" copy (system, startup, syscalls...)
     def ProjectAddSrc(self):
+      # TODO should add cmsis_os dir if missing (newer FreeRTOS from upstream)
       # system file
       systemfile = os.path.join(self.cubelibrary, SYSTEMPATH.format(self.MCUp[0], self.MCUp[1]), SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
       shutil.copy2(systemfile, os.path.join(self.projectpath, 'ldscripts'))
@@ -628,6 +630,10 @@ if __name__ == "__main__":
                         dest='components',
                         metavar='COMPONENT,COMPONENT',
                         help='add components to build [FreeRTOS,...]')
+    parser.add_argument('-o', '--options',
+                        dest='options',
+                        metavar='OPTION,OPTION',
+                        help='various options')
     parser.add_argument('-r', '--refreshinclude',
                         dest='refresh',
                         action='store_true',
@@ -645,7 +651,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     availablecomponents = set(('freertos', 'usbdevice', 'usbhost', 'stemwin', 'fatfs', 'lwip'))
-    components = set(args.components.lower().split(','))
+    if args.components:
+      components = set(args.components.lower().split(','))
+    else:
+      components = set()
     if not components <= availablecomponents:
       sys.exit('There are no components named: {}'.format(', '.join(components - availablecomponents)))
 
