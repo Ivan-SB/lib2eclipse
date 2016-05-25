@@ -40,6 +40,7 @@ You can enable FatFs, USBDevice, USBHost, STemWin, FreeRTOS, LwIP modules
 
 ## FreeRTOS
 I prefer to directly work with FreeRTOS in spite of using CMSIS OS wrapper, I've excluded from build freertos.c and I've added a freertos_setup.c and freertos_setup.h that contain an FreeRTOS initialization skeleton. But since STemWin and LwIP libraries still require cmsis_os.h I left it there.
+Upstream FreeRTOS doesn't include Source/CMSIS_RTOS/, if you want to use a newer version of FreeRTOS you'll have to copy that dir content into ./CMSIS_RTOS/ (relative to cube2eclipse.py). I'm not including those files since it is not clear to me if I've the right to redistribute them.
 
 ## Semihosting & Co.
 Liviu Ionescu had done a great work providing support for different trace strategies but I'm a humble programmer and I found I could just manage a simpler approach.
