@@ -328,6 +328,7 @@ class cube2eclipse():
       newexcludinglist = self.GetExcludeSrc()
       mergeremove = []
       cfg = self.project.xpath('//storageModule/cconfiguration/storageModule[@moduleId="cdtBuildSystem"]/configuration')
+#       TODO add all heap excluding one, can't use .project it seems there are 2 (?)
       for c in cfg:
         src = c.xpath('.//sourceEntries')
         if len(src)<=0:
@@ -476,7 +477,6 @@ class cube2eclipse():
     # TODO ProjectAddSrc should accept a list of dirs
     # TODO ProjectAddSrc should be separated in Source + "special file" copy (system, startup, syscalls...)
     def ProjectAddSrc(self):
-      # TODO should add cmsis_os dir if missing (newer FreeRTOS from upstream)
       # system file
       systemfile = os.path.join(self.cubelibrary, SYSTEMPATH.format(self.MCUp[0], self.MCUp[1]), SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
       shutil.copy2(systemfile, os.path.join(self.projectpath, 'ldscripts'))
@@ -494,6 +494,7 @@ class cube2eclipse():
         os.symlink(os.path.join(self.cubelibrary, 'Drivers'), os.path.join(dst, 'Drivers'), target_is_directory=True)
         os.symlink(os.path.join(self.cubelibrary, 'Middlewares'), os.path.join(dst, 'Middlewares'), target_is_directory=True)
         os.symlink(os.path.join(self.cubelibrary, 'Utilities'), os.path.join(dst, 'Utilities'), target_is_directory=True)
+        # TODO should add cmsis_os dir if freertos and missing (newer FreeRTOS from upstream)
       except FileExistsError:
         pass
       # undo
@@ -560,7 +561,7 @@ class cube2eclipse():
     def ProjectBackup(self):
       shutil.copy2(os.path.join(self.projectpath, '.cproject'), os.path.join(self.projectpath, '.cproject.bak'))
 
-    def ProjectRemove(self):
+    def ProjectWipe(self):
       if self.wipe == True:
         wipe = 'all'
       else:
@@ -573,32 +574,25 @@ class cube2eclipse():
       self.ProjectCleanBinLibraries(wipe)
       self.ProjectCleanSrcARM()
       self.ProjectCleanSrc()
-      self.ProjectCleanExcludeSrc(wipe)
+      self.ProjectCleanExcludeSrc(wipe)      
+
+    def ProjectRemove(self):
+      self.ProjectWipe()
       self.ProjectPrint("./.cproject")
 #       XXX should I remove undo section?
 
     def ProjectInstall(self):
-      if self.wipe == True:
-        wipe = 'all'
-      else:
-        wipe = 'current'
-
-      self.ProjectBackup()
-      self.ProjectCleanInclude(wipe)
-      self.ProjectCleanDef(wipe)
-      self.ProjectAddDef()
-      self.ProjectAddInclude()
-      self.ProjectCleanLD(wipe)
-      self.ProjectAddLD()
+      self.ProjectWipe()
+      
       self.ProjectImportStartup()
-      self.ProjectCleanBinLibraries(wipe)
+      self.ProjectAddLD()
       self.ProjectAddBinLibraries()
-      self.ProjectCleanSrcARM()
-      self.ProjectCleanSrc()
       self.ProjectAddSrc()
-      self.ProjectCleanExcludeSrc(wipe)
-      self.ProjectAddExcludeSrc()
       self.ProjectSourceMangle()
+      self.ProjectAddInclude()
+      self.ProjectAddDef()
+      self.ProjectAddExcludeSrc()
+
       self.ProjectPrint("./.cproject")
       self.UndoSave()
 
@@ -651,6 +645,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     availablecomponents = set(('freertos', 'usbdevice', 'usbhost', 'stemwin', 'fatfs', 'lwip'))
+    # TODO use argparse choices? beware of case
     if args.components:
       components = set(args.components.lower().split(','))
     else:
