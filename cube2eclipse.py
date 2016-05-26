@@ -154,7 +154,7 @@ class cube2eclipse():
         if len(previousundolibrary) > 0:
           self.previousundolibrary = previousundolibrary[0]
 
-    def __init__(self, cubeproject, cubelibrary, includecache, refresh, components):
+    def __init__(self, cubeproject, cubelibrary, includecache, components):
       self.components = components
       self.cubeproject = cubeproject
       self.cubelibrary = cubelibrary
@@ -194,19 +194,20 @@ class cube2eclipse():
         
       combined = "(?:" + ")|(?:".join(excluding) + ")"
       self.excludingR = re.compile(combined)
-
+      self.CubeProjectLoad()      
+      
+    def FillIncludes(self):
       if not self.includecache:
         self.includes = self.IncludeScan()
       else:
-        if(os.path.isfile(self.includecache) and not refresh):
+        if(os.path.isfile(self.includecache) and not self.refresh):
           self.includes = self.IncludeLoad()
         else:
           self.includes = self.IncludeScan()
           self.IncludeSave()
-      self.CubeProjectLoad()
       self.includes.extend(self.LibraryIncludeGet())
 
-    def ProjectLoad(self, project, wipe):
+    def ProjectLoad(self, project, wipe, refresh):
       cproject = os.path.join(project, '.cproject')
       if os.path.isfile(cproject) and os.access(cproject, os.W_OK):
         self.projectpath = project
@@ -214,13 +215,14 @@ class cube2eclipse():
         self.undo = etree.Element("lib2eclipse", {'version': __version__, 'URL': __url__})
         self.undolibrary = etree.SubElement(self.undo, 'library', name=LIBRARYNAME)
         self.wipe = wipe
+        self.refresh = refresh
       else:
         sys.exit("{} can't be opened for writing".format(cproject))
       self.UndoLoad()
 
     def IncludeScan(self):
       includes = []
-      for dirpath, _, filenames in os.walk(self.cubelibrary, followlinks=True):
+      for dirpath, _, filenames in os.walk(os.path.join(self.projectpath, LIBRARYNAME), followlinks=True):
         for f in filenames:
           if (os.path.splitext(f)[1].lower() in HEADERS) and (not self.IncludeExclude(dirpath)):
             includes.append(dirpath)
@@ -252,6 +254,7 @@ class cube2eclipse():
           i.getparent().remove(i)
 
     def ProjectAddInclude(self):
+      self.FillIncludes()
       includes = self.project.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="includePath"]')
       for i in includes:
         for l in self.includes:
@@ -494,7 +497,11 @@ class cube2eclipse():
         os.symlink(os.path.join(self.cubelibrary, 'Drivers'), os.path.join(dst, 'Drivers'), target_is_directory=True)
         os.symlink(os.path.join(self.cubelibrary, 'Middlewares'), os.path.join(dst, 'Middlewares'), target_is_directory=True)
         os.symlink(os.path.join(self.cubelibrary, 'Utilities'), os.path.join(dst, 'Utilities'), target_is_directory=True)
-        # TODO should add cmsis_os dir if freertos and missing (newer FreeRTOS from upstream)
+        if 'freertos' in self.components:
+          CMSIS_RTOSorig = os.path.join(dst, 'Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS')
+          if not os.path.isdir(CMSIS_RTOSorig):
+            CMSIS_RTOSsrc = os.path.join(codepath, 'CMSIS_RTOS')
+            shutil.copytree(CMSIS_RTOSsrc, os.path.join(self.projectpath, LIBRARYNAME, 'CMSIS_RTOS'))
       except FileExistsError:
         pass
       # undo
@@ -654,9 +661,9 @@ if __name__ == "__main__":
       sys.exit('There are no components named: {}'.format(', '.join(components - availablecomponents)))
 
     codepath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'code')
-    cube = cube2eclipse(args.cubeproject, args.cubelibrary, args.includecache, args.refresh, components)
+    cube = cube2eclipse(args.cubeproject, args.cubelibrary, args.includecache, components)
 
-    cube.ProjectLoad(args.project, args.wipe)
+    cube.ProjectLoad(args.project, args.wipe, args.refresh)
     if args.action == 'install':
       cube.ProjectInstall()
     elif args.action == 'remove':
