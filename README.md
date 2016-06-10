@@ -19,11 +19,9 @@ This means that if you need to use a library in an GNU ARM Eclipse C/C++ project
 6. Use this tool
 7. Refresh your C project (F5)
 8. Due to a problem in FreeRTOS disable Link-time optimizer -flto (Proprieties > C/C++ Build > Settings > Optimization) [^1]
-I noticed that sometimes you've to close/reopen a prooject more than once before Eclipse get aware of all the changes to get a successful build.
+I noticed that sometimes you've to close/reopen a project more than once before Eclipse get aware of all the changes to get a successful build.
 
-Currently the program makes a backup of your .cproject file and still it doesn't overwrite the original one, rather it saves a new one in the working directory.
-You'd have to manually copy the generated .cproject over the Eclipse one.
-This is going to change as soon as I'll be more confident in the code.  
+The program makes a backup of your .cproject file. The backup copy is never overwritten.
 
 ### Examples
 #### first install over a fresh GNU ARM STM32 project

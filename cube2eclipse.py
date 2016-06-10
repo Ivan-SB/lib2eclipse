@@ -572,7 +572,8 @@ class cube2eclipse():
   
   
   def ProjectBackup(self):
-    shutil.copy2(os.path.join(self.projectpath, '.cproject'), os.path.join(self.projectpath, '.cproject.bak'))
+    if not os.path.isfile(os.path.join(self.projectpath, '.cproject.bak')):
+      shutil.copy2(os.path.join(self.projectpath, '.cproject'), os.path.join(self.projectpath, '.cproject.bak'))
   
   def ProjectWipe(self):
     if self.wipe == True:
@@ -591,7 +592,7 @@ class cube2eclipse():
   
   def ProjectRemove(self):
     self.ProjectWipe()
-    self.ProjectPrint("./.cproject")
+    self.ProjectPrint(os.path.join(self.projectpath, '.cproject'))
   #       XXX should I remove undo section?
   
   def ProjectInstall(self):
@@ -606,7 +607,7 @@ class cube2eclipse():
     self.ProjectAddDef()
     self.ProjectAddExcludeSrc()
   
-    self.ProjectPrint("./.cproject")
+    self.ProjectPrint(os.path.join(self.projectpath, '.cproject'))
     self.UndoSave()
 
 if __name__ == "__main__":
