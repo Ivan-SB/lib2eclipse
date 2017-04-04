@@ -8,6 +8,12 @@
 #include <sys/time.h>
 #include <sys/times.h>
 
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#pragma GCC diagnostic ignored "-Wstrict-prototypes"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 /* Variables */
 extern int errno;
 
@@ -128,3 +134,4 @@ int _execve(char *name, char **argv, char **env) {
   return -1;
 }
 
+#pragma GCC diagnostic pop
