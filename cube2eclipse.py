@@ -671,7 +671,7 @@ if __name__ == "__main__":
     if args.options:
       options = set(args.options.lower().split(','))
     else:
-      options = set(('heap2',))
+      options = set(('heap4',))
     if not options <= availableoptions:
       sys.exit('There are no options named: {}'.format(', '.join(options - availableoptions)))
 
