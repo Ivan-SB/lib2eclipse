@@ -52,6 +52,7 @@ STARTUPPATH = "Drivers/CMSIS/Device/ST/STM32{}{}xx/Source/Templates/gcc"
 # TODO include libraries as ref in .project
 # rather than copying/symlinking source in workspace, it is better to include libraries as ref into .project
 # .project
+# direct link
 #   <linkedResources>
 #     <link>
 #       <name>olimex</name>
@@ -59,6 +60,17 @@ STARTUPPATH = "Drivers/CMSIS/Device/ST/STM32{}{}xx/Source/Templates/gcc"
 #       <location>/home/ivan/Documents/programming/embedded/stm32/olimex</location>
 #     </link>
 #   </linkedResources>
+# link inside a real directory (pino exists, winstar is a link)
+#   <linkedResources>
+#     <link>
+#       <name>pino/winstar</name>
+#       <type>2</type>
+#       <location>/home/ivan/Documents/programming/embedded/display/winstar</location>
+#     </link>
+#   </linkedResources>
+
+
+
 # .cproject &quot;${workspace_loc:/${ProjName}/olimex}&quot;"/
 # this has an impact also on how to gather includes
 
@@ -96,11 +108,9 @@ class cube2eclipse():
     else:
       print(s)
   
-  def ProjectPrint(self, file):
-    self.TreePrint(self.cproject, file)
-  
   def ProjectSave(self):
-    self.ProjectPrint(os.path.join(self.projectpath, '.cproject'))
+    self.TreePrint(self.cproject, os.path.join(self.projectpath, '.cproject'))
+    self.TreePrint(self.project, os.path.join(self.projectpath, '.project'))
   
   def CubeProjectLoad(self):
     projectdir = os.path.normpath(self.cubeproject)
@@ -526,6 +536,16 @@ class cube2eclipse():
     # Library
     dst = os.path.join(self.projectpath, LIBRARYNAME)
     try:
+      projectroot = self.project.xpath('//projectDescription')
+      linkedres = self.project.xpath('//projectDescription/linkedResources')
+#       FIXME this check doesn't work, start with a fresh linkedres everytime'
+#       if len(linkedres)<=0:
+#         print('PINO')
+#         linkedres = etree.SubElement(projectroot[0], 'linkedResources')
+#       link = etree.SubElement(linkedres, 'link')
+#       etree.SubElement(link, 'name').text='c'
+#       etree.SubElement(link, 'type').text='2'
+#       etree.SubElement(link, 'location').text='bau'
       os.mkdir(dst, mode=0o770)
       os.symlink(os.path.join(self.cubelibrary, 'Drivers'), os.path.join(dst, 'Drivers'), target_is_directory=True)
       os.symlink(os.path.join(self.cubelibrary, 'Middlewares'), os.path.join(dst, 'Middlewares'), target_is_directory=True)
@@ -612,6 +632,8 @@ class cube2eclipse():
   def ProjectBackup(self):
     if not os.path.isfile(os.path.join(self.projectpath, '.cproject.bak')):
       shutil.copy2(os.path.join(self.projectpath, '.cproject'), os.path.join(self.projectpath, '.cproject.bak'))
+    if not os.path.isfile(os.path.join(self.projectpath, '.project.bak')):
+      shutil.copy2(os.path.join(self.projectpath, '.project'), os.path.join(self.projectpath, '.project.bak'))
   
   def ProjectWipe(self):
     if self.wipe == True:
@@ -630,7 +652,7 @@ class cube2eclipse():
   
   def ProjectRemove(self):
     self.ProjectWipe()
-    self.ProjectPrint(os.path.join(self.projectpath, '.cproject'))
+    self.ProjectSave()
   #       XXX should I remove undo section?
   
   def ProjectInstall(self):
@@ -644,8 +666,8 @@ class cube2eclipse():
     self.ProjectAddInclude()
     self.ProjectAddDef()
     self.ProjectAddExcludeSrc()
-  
-    self.ProjectPrint(os.path.join(self.projectpath, '.cproject'))
+
+    self.ProjectSave()
     self.UndoSave()
 
 if __name__ == "__main__":
