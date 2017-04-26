@@ -115,8 +115,8 @@ class cube2eclipse():
   def CubeProjectLoad(self):
     projectdir = os.path.normpath(self.cubeproject)
     projectname = os.path.basename(projectdir)
-    eclipseproject = os.path.join(projectdir, STMDIR, projectname)
-    cproject = os.path.join(eclipseproject, '.cproject')
+    self.eclipseproject = os.path.join(projectdir, STMDIR, projectname)
+    cproject = os.path.join(self.eclipseproject, '.cproject')
     if os.path.isfile(cproject) and os.access(cproject, os.R_OK):
       self.cubecprojectx = etree.parse(open(cproject, "r"))
     else:
@@ -128,7 +128,7 @@ class cube2eclipse():
   #         sys.exit("{} can't be opened for reading".format(project))
     self.CubeLibraryCheck()
     self.CubeGetInfo()
-    self.ldscript = os.path.join(eclipseproject, LDSCRIPT.format(self.MCU))
+    self.ldscript = LDSCRIPT.format(self.MCU)
 
   def CubeLibraryCheck(self):
     if (os.path.isdir(self.cubelibrary) and
@@ -265,7 +265,11 @@ class cube2eclipse():
     for dirpath, _, filenames in os.walk(os.path.join(self.projectpath, LIBRARYNAME), followlinks=True):
       for f in filenames:
         if (os.path.splitext(f)[1].lower() in HEADERS) and (not self.IncludeExclude(dirpath)):
-          includes.append(dirpath)
+          relpath = os.path.relpath(dirpath, self.projectpath)
+# TODO cleanup debug print
+#           print("p={} d={} r={} f={}".format(self.projectpath, dirpath, relpath, '&quot;${workspace_loc:/${ProjName}/' + relpath + '}&quot;'))
+#           ${workspace_loc:/${ProjName}/olimex} &quot;zzz&quot;
+          includes.append('"${workspace_loc:/${ProjName}/' + relpath + '}"')
           break
     return includes
   
@@ -455,11 +459,13 @@ class cube2eclipse():
   def ProjectAddLD(self):
     sections = self.cproject.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]')
     for ld in sections:
-      etree.SubElement(ld, 'listOptionValue', {'builtIn': "false", 'value': self.ldscript})
-    shutil.copy2(self.ldscript, os.path.join(self.projectpath, 'ldscripts'))
+      # TODO relative path for ldscript
+      etree.SubElement(ld, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts', self.ldscript)})
+    shutil.copy2(os.path.join(self.eclipseproject, self.ldscript), os.path.join(self.projectpath, 'ldscripts'))
     # undo
     uld = etree.SubElement(self.undocproject, 'ld')
-    etree.SubElement(uld, 'listOptionValue', {'builtIn': "false", 'value': self.ldscript})
+    # TODO relative path for ldscript
+    etree.SubElement(uld, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts', self.ldscript)})
     sections = self.cproject.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]')
     for ldlib in sections:
       etree.SubElement(ldlib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts')})
@@ -535,18 +541,20 @@ class cube2eclipse():
     etree.SubElement(self.undocproject, 'syscalls', {'value': os.path.join(self.projectpath, 'syscalls.c')})
     # Library
     dst = os.path.join(self.projectpath, LIBRARYNAME)
-    os.mkdir(dst, mode=0o770)
     try:
-      projectroot = self.project.xpath('//projectDescription')
-      linkedres = self.project.xpath('//projectDescription/linkedResources')
-      if len(linkedres)<=0:
-        linkedres = etree.SubElement(projectroot[0], 'linkedResources')
-      else:
-        linkedres = linkedres[0]
-      link = etree.SubElement(linkedres, 'link')
-      etree.SubElement(link, 'name').text='c'
-      etree.SubElement(link, 'type').text='2'
-      etree.SubElement(link, 'location').text='bau'
+      os.mkdir(dst, mode=0o770)
+#       projectroot = self.project.xpath('//projectDescription')
+#       linkedres = self.project.xpath('//projectDescription/linkedResources')
+#       if len(linkedres)<=0:
+#         linkedres = etree.SubElement(projectroot[0], 'linkedResources')
+#       else:
+#         linkedres = linkedres[0]
+#       links = ('Drivers', 'Middlewares', 'Utilities')
+#       for l in links:
+#         link = etree.SubElement(linkedres, 'link')
+#         etree.SubElement(link, 'name').text=LIBRARYNAME + '/' + l
+#         etree.SubElement(link, 'type').text='2'
+#         etree.SubElement(link, 'location').text=os.path.join(self.cubelibrary, l)
 # TODO add undo
       os.symlink(os.path.join(self.cubelibrary, 'Drivers'), os.path.join(dst, 'Drivers'), target_is_directory=True)
       os.symlink(os.path.join(self.cubelibrary, 'Middlewares'), os.path.join(dst, 'Middlewares'), target_is_directory=True)
