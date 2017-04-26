@@ -535,18 +535,19 @@ class cube2eclipse():
     etree.SubElement(self.undocproject, 'syscalls', {'value': os.path.join(self.projectpath, 'syscalls.c')})
     # Library
     dst = os.path.join(self.projectpath, LIBRARYNAME)
+    os.mkdir(dst, mode=0o770)
     try:
       projectroot = self.project.xpath('//projectDescription')
       linkedres = self.project.xpath('//projectDescription/linkedResources')
-#       FIXME this check doesn't work, start with a fresh linkedres everytime'
-#       if len(linkedres)<=0:
-#         print('PINO')
-#         linkedres = etree.SubElement(projectroot[0], 'linkedResources')
-#       link = etree.SubElement(linkedres, 'link')
-#       etree.SubElement(link, 'name').text='c'
-#       etree.SubElement(link, 'type').text='2'
-#       etree.SubElement(link, 'location').text='bau'
-      os.mkdir(dst, mode=0o770)
+      if len(linkedres)<=0:
+        linkedres = etree.SubElement(projectroot[0], 'linkedResources')
+      else:
+        linkedres = linkedres[0]
+      link = etree.SubElement(linkedres, 'link')
+      etree.SubElement(link, 'name').text='c'
+      etree.SubElement(link, 'type').text='2'
+      etree.SubElement(link, 'location').text='bau'
+# TODO add undo
       os.symlink(os.path.join(self.cubelibrary, 'Drivers'), os.path.join(dst, 'Drivers'), target_is_directory=True)
       os.symlink(os.path.join(self.cubelibrary, 'Middlewares'), os.path.join(dst, 'Middlewares'), target_is_directory=True)
       os.symlink(os.path.join(self.cubelibrary, 'Utilities'), os.path.join(dst, 'Utilities'), target_is_directory=True)
