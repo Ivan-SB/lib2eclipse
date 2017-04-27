@@ -458,20 +458,20 @@ class cube2eclipse():
   
   def ProjectAddLD(self):
     sections = self.cproject.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="stringList"]')
+    ldpath = '"${workspace_loc:/${ProjName}/ldscripts}"'
+    ldscript = '"${workspace_loc:/${ProjName}/ldscripts/' + self.ldscript + '}"'
     for ld in sections:
-      # TODO relative path for ldscript
-      etree.SubElement(ld, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts', self.ldscript)})
+      etree.SubElement(ld, 'listOptionValue', {'builtIn': "false", 'value': ldscript})
     shutil.copy2(os.path.join(self.eclipseproject, self.ldscript), os.path.join(self.projectpath, 'ldscripts'))
     # undo
     uld = etree.SubElement(self.undocproject, 'ld')
-    # TODO relative path for ldscript
-    etree.SubElement(uld, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts', self.ldscript)})
+    etree.SubElement(uld, 'listOptionValue', {'builtIn': "false", 'value': ldscript})
     sections = self.cproject.xpath('//option[starts-with(@superClass, "ilg.gnuarmeclipse.managedbuild.cross.option") and @valueType="libPath"]')
     for ldlib in sections:
-      etree.SubElement(ldlib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts')})
+      etree.SubElement(ldlib, 'listOptionValue', {'builtIn': "false", 'value': ldpath})
     # undo
     uldlib = etree.SubElement(self.undocproject, 'ldlib')
-    etree.SubElement(uldlib, 'listOptionValue', {'builtIn': "false", 'value': os.path.join(self.projectpath, 'ldscripts')})
+    etree.SubElement(uldlib, 'listOptionValue', {'builtIn': "false", 'value': ldpath})
   
   def ProjectImportStartup(self):
     startupfilesrc = os.path.join(self.cubelibrary, STARTUPPATH.format(self.MCUp[0], self.MCUp[1]),
