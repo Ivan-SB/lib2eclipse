@@ -89,7 +89,7 @@ class cube2eclipse():
       if e.attrib['value'] in values:
         e.getparent().remove(e)
   
-  # FIXME I should clean project and cproject
+  # TODO I should clean project and cproject
   def ProjectClean(self, optionpath, uoptionpath, componenttype='current'):
     options = self.cproject.xpath(optionpath)
     if componenttype == 'all':
@@ -266,9 +266,6 @@ class cube2eclipse():
       for f in filenames:
         if (os.path.splitext(f)[1].lower() in HEADERS) and (not self.IncludeExclude(dirpath)):
           relpath = os.path.relpath(dirpath, self.projectpath)
-# TODO cleanup debug print
-#           print("p={} d={} r={} f={}".format(self.projectpath, dirpath, relpath, '&quot;${workspace_loc:/${ProjName}/' + relpath + '}&quot;'))
-#           ${workspace_loc:/${ProjName}/olimex} &quot;zzz&quot;
           includes.append('"${workspace_loc:/${ProjName}/' + relpath + '}"')
           break
     return includes
@@ -517,10 +514,10 @@ class cube2eclipse():
     shutil.rmtree(os.path.join(self.projectpath, 'system'), ignore_errors=False, onerror=self.rmtreeError)
   
   def ProjectCleanSrc(self):
-    systemfile = os.path.join(self.projectpath, 'ldscripts', SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
+#     systemfile = os.path.join(self.projectpath, 'ldscripts', SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
     syscallsfile = os.path.join(self.projectpath, 'ldscripts', 'syscalls.c')
     try:
-      os.remove(systemfile)
+#       os.remove(systemfile)
       os.remove(syscallsfile)
       shutil.rmtree(os.path.join(self.projectpath, LIBRARYNAME))
     except FileNotFoundError:
@@ -530,10 +527,10 @@ class cube2eclipse():
   # TODO ProjectAddSrc should be separated in Source + "special file" copy (system, startup, syscalls...)
   def ProjectAddSrc(self):
     # system file
-    systemfile = os.path.join(self.cubelibrary, SYSTEMPATH.format(self.MCUp[0], self.MCUp[1]), SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
-    shutil.copy2(systemfile, os.path.join(self.projectpath, 'ldscripts'))
+#     systemfile = os.path.join(self.cubelibrary, SYSTEMPATH.format(self.MCUp[0], self.MCUp[1]), SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))
+#     shutil.copy2(systemfile, os.path.join(self.projectpath, 'ldscripts'))
     # undo
-    etree.SubElement(self.undocproject, 'system', {'value': os.path.join(self.projectpath, 'ldscripts', SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))})
+#     etree.SubElement(self.undocproject, 'system', {'value': os.path.join(self.projectpath, 'ldscripts', SYSTEMC.format(self.MCUp[0].lower(), self.MCUp[1].lower()))})
     # syscalls file
     syscallsfile = os.path.join(codepath, 'syscalls.c')
     shutil.copy2(syscallsfile, os.path.join(self.projectpath, 'ldscripts'))
@@ -597,12 +594,13 @@ class cube2eclipse():
   
   def ProjectSourceMangle(self):
     if 'freertos' in self.components:
-      with open(os.path.join(self.projectpath, LIBRARYNAME, 'Src/main.c'), 'r+') as f:
-        oldmain = f.read()
-        f.truncate(0)
-        # cmsis_os.h is used in other libraries: STemWin and LwIP
-        newmain = re.sub('#include "cmsis_os.h"', '#include "cmsis_os.h"\n#include "freertos_setup.h"', oldmain)
-        newmain = re.sub('/* USER CODE BEGIN Includes */',
+      with open(os.path.join(self.cubeproject, 'Src/main.c'), 'r+') as s:
+        oldmain = s.read()
+        with open(os.path.join(self.projectpath, LIBRARYNAME, 'Src/main.c'), 'r+') as f:
+          f.truncate(0)
+          # cmsis_os.h is used in other libraries: STemWin and LwIP
+          newmain = re.sub('#include "cmsis_os.h"', '#include "cmsis_os.h"\n#include "freertos_setup.h"', oldmain)
+          newmain = re.sub('/* USER CODE BEGIN Includes */',
                          '''
 #pragma GCC diagnostic push
                          
@@ -612,8 +610,8 @@ class cube2eclipse():
 #pragma GCC diagnostic warning "-Wextra"
 
 /* USER CODE BEGIN Includes */''', newmain)
-        newmain = newmain + '\n#pragma GCC diagnostic pop\n'
-        f.write(newmain)
+          newmain = newmain + '\n#pragma GCC diagnostic pop\n'
+          f.write(newmain)
       rtosc = os.path.join(codepath, "freertos_setup.c")
       self.CopyNoOverwrite(rtosc, os.path.join(self.projectpath, LIBRARYNAME, 'Src/freertos_setup.c'))
       rtosh = os.path.join(codepath, "freertos_setup.h")
