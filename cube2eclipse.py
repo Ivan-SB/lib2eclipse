@@ -317,9 +317,7 @@ class cube2eclipse():
   def GetExcludeSrc(self):
     Drivers = os.path.join(self.projectpath, LIBRARYNAME, 'Drivers/STM32F1xx_HAL_Driver/Src')
     ll = self.FilterDir(Drivers, '.*_ll_.*\.c')
-    print(ll)   
     tf = self.FilterDir(Drivers, '.*_template\.c')
-    print(tf)
     
     templates = ["STCube/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates", "STCube/Drivers/CMSIS/RTOS"]
     DSPlib = ["STCube/Drivers/CMSIS/DSP_Lib"]
