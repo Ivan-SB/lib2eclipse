@@ -35,7 +35,24 @@ __weak void vApplicationIdleHook( void );
 __weak void vApplicationIdleHook( void ) {
 
 }
+
+#if ( configUSE_TICKLESS_IDLE == 1 )
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wint-conversion"
+void configPRE_SLEEP_PROCESSING(uint32_t *ulExpectedIdleTime);
+void configPRE_SLEEP_PROCESSING(uint32_t *ulExpectedIdleTime) {
+
+}
+void configPOST_SLEEP_PROCESSING(uint32_t *ulExpectedIdleTime);
+void configPOST_SLEEP_PROCESSING(uint32_t *ulExpectedIdleTime) {
+
+}
+#pragma GCC diagnostic pop
+#endif /* configUSE_TICKLESS_IDLE */
+
 #endif /* configUSE_IDLE_HOOK */
+
+
 
 __weak void MX_FREERTOS_Init(void) {
   xTaskCreate(

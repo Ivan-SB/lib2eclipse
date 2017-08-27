@@ -70,7 +70,6 @@ STARTUPPATH = "Drivers/CMSIS/Device/ST/STM32{}{}xx/Source/Templates/gcc"
 #   </linkedResources>
 
 
-
 # .cproject &quot;${workspace_loc:/${ProjName}/olimex}&quot;"/
 # this has an impact also on how to gather includes
 
@@ -305,14 +304,29 @@ class cube2eclipse():
     for l in self.includes:
         etree.SubElement(uinclude, 'listOptionValue', {'builtin': 'false', "value": '{}'.format(l)})
   
+  def FilterDir(self, d, regex):
+    r = re.compile(regex)
+    l = []
+    for dirpath, _, filenames in os.walk(d, followlinks=True):
+      for filename in filenames:
+        if re.search(r, filename):
+          f = os.path.join(os.path.relpath(dirpath, self.projectpath), filename)
+          l.append(f)
+    return l
+    
   def GetExcludeSrc(self):
-    templates = ["STCube/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_msp_template.c", "STCube/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates", "STCube/Drivers/CMSIS/RTOS"]
+    Drivers = os.path.join(self.projectpath, LIBRARYNAME, 'Drivers/STM32F1xx_HAL_Driver/Src')
+    ll = self.FilterDir(Drivers, '.*_ll_.*\.c')
+    print(ll)   
+    tf = self.FilterDir(Drivers, '.*_template\.c')
+    print(tf)
+    
+    templates = ["STCube/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates", "STCube/Drivers/CMSIS/RTOS"]
     DSPlib = ["STCube/Drivers/CMSIS/DSP_Lib"]
     BSP = ["STCube/Drivers/BSP"]
-  
     UT = ["STCube/Utilities"]
   
-    common = templates + DSPlib + BSP + UT
+    common = templates + tf + ll + DSPlib + BSP + UT
   
     excluding = common
   
@@ -608,6 +622,7 @@ class cube2eclipse():
 #pragma GCC diagnostic warning "-Wpadded"
 #pragma GCC diagnostic warning "-Wunused"
 #pragma GCC diagnostic warning "-Wextra"
+#pragma GCC diagnostic warning "-Waggregate-return"
 
 /* USER CODE BEGIN Includes */''', newmain)
           newmain = newmain + '\n#pragma GCC diagnostic pop\n'
