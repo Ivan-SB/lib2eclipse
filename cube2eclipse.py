@@ -162,8 +162,15 @@ class cube2eclipse():
   def LibraryIncludeGet(self):
     # TODO should include /portable/Tasking and other subdirs
     includes = ['"${workspace_loc:/${ProjName}/STCube/Inc}"']
+#     "${workspace_loc:/${ProjName}../../../../../usr/local/src/STM32Cube_FW_F1_V1.6.0l/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM3"
     if 'freertos' in self.components:
-      includes = includes + [os.path.join(self.cubelibrary, 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/', 'ARM_CM' + self.GetCM(self.MCUp[1]))]
+      d = '"${workspace_loc:/${ProjName}/' + os.path.relpath(
+        os.path.join(
+          self.projectpath, LIBRARYNAME
+          , 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/'
+          , 'ARM_CM' + self.GetCM(self.MCUp[1]))
+        , self.projectpath) + '"'
+      includes = includes + [d]
     return includes
   
   def UndoSave(self):
@@ -343,7 +350,8 @@ class cube2eclipse():
         r = re.sub('(heap)([0-9])', r'\1_\2.c', o)
         e = srcpath = os.path.relpath(os.path.join(FreeRTOSport, 'MemMang', r), basepath)
         MemMag.append(e)
-      excluding = excluding + MCUport + MemMag + freertos
+#       excluding = excluding + MCUport + MemMag + freertos
+      excluding = excluding + MCUport + MemMag
     else:
       excluding = excluding + self.FreeRTOS
   
